@@ -9,6 +9,7 @@ h5py
 
 scikit-learn
 tensorflow
+tensorboard
 keras
 
 pyqt5
