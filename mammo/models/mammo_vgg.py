@@ -6,9 +6,8 @@ Reference:
     Very Deep Convolutional Networks for Large-Scale Image Recognition, https://arxiv.org/abs/1409.1556
 """
 from pdb import set_trace as debug
-import sys
 from keras import backend as K
-from keras.layers import Conv2D, MaxPooling2D, BatchNormalization
+from keras.layers import Conv2D, MaxPooling2D, BatchNormalization, Dropout
 from keras.layers import Flatten, Dense, Input
 from keras.layers.advanced_activations import PReLU
 from keras.models import Sequential
@@ -27,51 +26,43 @@ def get_vgg16_model(use_relu):
         return gen_vgg16
     
 
-def gen_vgg16(include_top=True, weights='imagenet', input_tensor=None):
+def gen_vgg16(input_shape, weights='imagenet',
+              optimizer='adam', loss='binary_crossentropy', metrics=['accuracy']):
     """Instantiate the VGG16 architecture
     
     :param include_top: whether to include the 3 fully-connected layers at the top of the network.
     :param weights:
-    :param input_tensor: optional Keras tensor (i.e. output of `layers.Input()`)
-                         to use as image input for the model.
-    :return:             a Keras model instance.
     """
-    logger.info('include_top is %s, weights is %s' % (str(include_top), weights))
+    logger.info('input_shape is %s, weights is %s' % (str(input_shape), weights))
             
     # Determine proper input shape based on tensorflow or theano as a backend
-    assert K.image_dim_ordering() == 'tf', 'Bakend must be tensorflow but found otherwise' 
-    if include_top:
-        input_shape = (224, 224, 3)
-        input_shape = (None, None, 3)
-
-    if input_tensor is None:
-        logger.info('input_tensor is None')
-        img_input = Input(shape=input_shape)
-    else:
-        if not K.is_keras_tensor(input_tensor):
-            img_input = Input(tensor=input_tensor)
-        else:
-            img_input = input_tensor
+    assert K.image_dim_ordering() == 'tf', 'Backend must be tensorflow but found otherwise'
     
     model = Sequential()
+    
     # Block 1
-    model.add(Conv2D(img_input, 16, 3, 3, border_mode='same', name='block1_conv1'))
-    debug()
-    model.add(PReLU())
-    model.add(BatchNormalization())
-    model.add(MaxPooling2D((2, 2), strides=(2, 2), name='block1_pool'))
+    model = Sequential()
 
-    model.add(Conv2D(32, 3, 3, border_mode='same', name='block1_conv2'))
-    model.add(PReLU())
-    model.add(BatchNormalization())
+    # 32 convolution filters of size 3x3 each.
+    model.add(Conv2D(32, (3, 3), activation='relu', input_shape=input_shape))
+    model.add(Conv2D(32, (3, 3), activation='relu'))
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    model.add(Dropout(0.25))
 
-    if include_top:
-        # Classification block
-        model.add(Flatten(name='flatten'))
-        model.add(Dense(1, activation='sigmoid', name='predictions'))
+    model.add(Conv2D(64, (3, 3), activation='relu'))
+    model.add(Conv2D(64, (3, 3), activation='relu'))
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    model.add(Dropout(0.25))
+
+    model.add(Flatten())
+    model.add(Dense(256, activation='relu'))
+    model.add(Dropout(0.5))
+    model.add(Dense(10, activation='softmax'))
+
 
     # load weights
     if weights is not None:
         pass
-
+    model.compile(optimizer=optimizer, loss=loss,
+                  metrics=metrics)
     return model

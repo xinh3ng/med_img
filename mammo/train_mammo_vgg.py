@@ -26,8 +26,8 @@ def save_train_metrics(history, metrics, filename):
     logger.info("Successfully saved metrics from the training process in " + filename)
 
 
-def main(optimizer='adam', loss='binary_crossentropy', negative_ratio=1.0,
-         metrics=['binary_accuracy', 'precision', 'recall', 'fmeasure']):
+def main(use_relu=False, optimizer='adam', loss='binary_crossentropy', negative_ratio=1.0,
+         metrics=['accuracy']):
     """Main function
     
     :param negative_ratio: Ratio of pos/neg samples. 2 means every 100 pos samples, we use 200 neg samples
@@ -43,18 +43,17 @@ def main(optimizer='adam', loss='binary_crossentropy', negative_ratio=1.0,
     #kernel_size = (3, 3)      # convolution kernel size
     
     # Generate model instance
-    gen_vgg_fn = get_vgg16_model(use_relu=os.getenv('use_relu', False))
-    model = gen_vgg_fn(include_top=True, weights=None)
-    model.compile(optimizer=optimizer, loss=loss,
-                  metrics=metrics)
-    model.summary()
-    debug()
+    gen_vgg_fn = get_vgg16_model(use_relu)
+    model = gen_vgg_fn(input_shape=(224, 224, 3), weights='imagenet', optimizer=optimizer,
+                       loss=loss, metrics=metrics)
+    logger.info("Print model summary:")
+    model.summary()  #  print model summary
     
     # Get a balanced dataset with a negative:positive ratio of approximately negative_ratio
-    creator = sl.PNGBatchGeneratorCreator(c.PREPROCESS_IMG_DIR + '/',
+    creator = sl.PNGBatchGeneratorCreator(c.PREPROCESS_IMG_DIR,
                                           batch_size=batch_size, validation_split=validation_split)
-    balanced = creator.balance_dataset(creator.get_dataset('training'), 
-                                       negative_ratio=negative_ratio)
+    balanced = sl.rebalance_data(creator.get_dataset('training'), 
+                                 negative_ratio=negative_ratio)
 
     # Number of samples per epoch must be a multiple of batch size. Thus we'll use the largest
     # multiple of batch size possible. This wastes at most batch size amount of samples.

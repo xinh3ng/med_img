@@ -13,7 +13,7 @@ HEIGHT = 224
 # kept in sync with the variable in preprocess.sh.
 IMAGE_MAGICK_FLAGS = '-depth 8 -resize {}x{}! -colorspace sRGB'.format(WIDTH, HEIGHT)
 
-DIR_PREFIX = '../..' if LOCAL_TEST else ''
+DIR_PREFIX = '../data'
 
 # Directory where raw .dcm training images are stored according to challenge guidelines.
 TRAIN_IMG_DIR = DIR_PREFIX + '/train_data'
