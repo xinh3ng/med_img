@@ -9,7 +9,7 @@ import keras.preprocessing.image as kimage
 from keras.preprocessing.image import ImageDataGenerator
 from PIL import Image
 
-from med_img.mammo.utils import constants as c
+from med_img.mammo.config import constants as c
 
 def rebalance_data(data, column='cancer', negative_ratio=2.0, seed=None):
     """Rebalance data  to desired positive / negative ratio if there are enough samples."""

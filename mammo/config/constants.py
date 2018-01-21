@@ -2,8 +2,9 @@
 
 import os
 
-# Indicates whether we're in a local test environment or not.
-LOCAL_TEST = os.getenv('LOCAL_TEST', None) is not None
+TF_CPP_MIN_LOG_LEVEL = 2
+
+LABELS = ['benign', 'normal', 'malevolent']
 
 # Dimensions of the images that will be used for classification and training.
 WIDTH = 224

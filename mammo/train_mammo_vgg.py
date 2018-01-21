@@ -5,8 +5,9 @@ import numpy as np
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 
 from med_img.mammo.utils.generic_utils import create_logger
+import med_img.mammo.config.constants as c
+from med_img.mammo.config.config_data import data_config
 import med_img.mammo.utils.simple_loader as sl
-import med_img.mammo.utils.constants as c
 from med_img.mammo.models.mammo_vgg import get_vgg16_model
 
 logger = create_logger(__name__, level='info')
@@ -15,6 +16,7 @@ seed = os.getenv('RANDOM_SEED', 1337) # Must use the RANDOM_SEED environment as 
 
 def save_train_metrics(history, metrics, filename):
     """Save metrics from the training process for later visualization"""
+
     with open(filename, 'w') as f:
         for metric in metrics:
             f.write('train {}\n'.format(metric))
@@ -26,16 +28,17 @@ def save_train_metrics(history, metrics, filename):
     logger.info("Successfully saved metrics from the training process in " + filename)
 
 
-def main(use_relu=False, optimizer='adam', loss='binary_crossentropy', negative_ratio=1.0,
-         metrics=['accuracy']):
+def main(dataset_name='ddsm', negative_ratio=1.0,
+         use_relu=False, batch_size=32, epochs=25,
+         optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy']):
     """Main function
     
     :param negative_ratio: Ratio of pos/neg samples. 2 means every 100 pos samples, we use 200 neg samples
     """
     np.random.seed(int(seed))
 
-    batch_size = 32
-    epochs = 25
+    classes = len(data_config[dataset_name])
+   
     validation_split = 0.25
     blowup = 5  # Number of times the data in the balanced dataset should be augmented.
     #nb_filters = 32      # number of convolutional filters to use
@@ -44,12 +47,13 @@ def main(use_relu=False, optimizer='adam', loss='binary_crossentropy', negative_
     
     # Generate model instance
     gen_vgg_fn = get_vgg16_model(use_relu)
-    model = gen_vgg_fn(input_shape=(224, 224, 3), weights='imagenet', optimizer=optimizer,
-                       loss=loss, metrics=metrics)
+    model = gen_vgg_fn(
+            input_shape=data_config[dataset_name]['input_shape'], classes=classes,
+            weights=None, optimizer=optimizer, loss=loss, metrics=metrics)
     logger.info("Print model summary:")
-    model.summary()  #  print model summary
+    model.summary()  # print model summary
     
-    # Get a balanced dataset with a negative:positive ratio of approximately negative_ratio
+    # Get a balanced dataset with a negative:positive ratio
     creator = sl.PNGBatchGeneratorCreator(c.PREPROCESS_IMG_DIR,
                                           batch_size=batch_size, validation_split=validation_split)
     balanced = sl.rebalance_data(creator.get_dataset('training'), 
@@ -71,11 +75,13 @@ def main(use_relu=False, optimizer='adam', loss='binary_crossentropy', negative_
 
     logger.info('Start training on set of {} images with a negative ratio of {}'\
                 .format(num_training_samples, negative_ratio))
-    history = model.fit_generator(creator.get_generator(dataset=balanced), num_training_samples,
-                                  epochs, validation_data=creator.get_generator('validation'),
-                                  nb_val_samples=num_validation_samples,
-                                  callbacks=[early_stopping, model_checkpoint])
+    history = model.fit_generator(
+            creator.get_generator(dataset=balanced), 
+            steps_per_epoch=num_training_samples, epochs=epochs, 
+            validation_data=creator.get_generator('validation'), validation_steps=num_validation_samples,
+            callbacks=[early_stopping, model_checkpoint])
     logger.info("Successfully fit the model")
+    
     model.save(c.MODELSTATE_DIR + '/' + c.MODEL_FILENAME)
     logger.info("Successfully saved the model")
 
@@ -88,9 +94,11 @@ def main(use_relu=False, optimizer='adam', loss='binary_crossentropy', negative_
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
+    parser.add_argument('--dataset_name', default='ddsm')
+    parser.add_argument('--negative_ratio', type=float, default='1.0')
     parser.add_argument('--optimizer', default='adam')
     parser.add_argument('--loss', default='binary_crossentropy')
-    parser.add_argument('--negative_ratio', type=float, default='1.0')
+
     args = parser.parse_args()
 
     main(**vars(args))
