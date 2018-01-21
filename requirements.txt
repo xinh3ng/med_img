@@ -1,0 +1,17 @@
+numpy
+scipy
+pandas
+matplotlib
+pillow
+tqdm
+
+h5py
+
+scikit-learn
+tensorflow
+keras
+
+pyqt5
+spyder
+ipykernel
+jupyter
