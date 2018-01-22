@@ -8,7 +8,7 @@ from med_img.mammo.utils.generic_utils import create_logger
 import med_img.mammo.config.constants as c
 from med_img.mammo.config.config_data import data_config
 # import med_img.mammo.utils.simple_loader as sl
-from med_img.mammo.utils.data_utils import create_image_sets
+from med_img.mammo.utils.data_utils import create_image_sets, load_image_data
 from med_img.mammo.models.mammo_vgg import get_vgg16_model
 
 logger = create_logger(__name__, level='info')
@@ -42,21 +42,21 @@ def save_train_metrics(history, metrics, filename):
 
 
 def main(dataset_name='ddsm',
-         use_relu=False, batch_size=32, epochs=25,
+         use_relu=False, val_pct=0.1, batch_size=32, epochs=25,
          optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy']):
     """Main function
 
     """
     np.random.seed(int(seed))
 
-    classes = len(data_config[dataset_name]['labels'])
-   
-    validation_split = 0.25
-    blowup = 5  # Number of times the data in the balanced dataset should be augmented.
+    classes = len(data_config[dataset_name]['labels'].keys())
     
     image_sets = create_image_sets(image_dir=data_config[dataset_name]['data_dir'], 
                                    labels=data_config[dataset_name]['labels'],
-                                   val_pct=0.1, test_pct=0.1)
+                                   val_pct=val_pct, test_pct=0.0)
+    (X_train, y_train), (X_val, y_val), (X_test, y_test) = load_image_data(image_sets, 
+            input_shape=data_config[dataset_name]['input_shape'])
+    
     debug()
     
     # Generate the model instance
@@ -66,27 +66,14 @@ def main(dataset_name='ddsm',
     logger.info("Print model summary:")
     model.summary()  # print model summary
     
-    # Get a balanced dataset with a negative:positive ratio
-    #creator = sl.PNGBatchGeneratorCreator(c.PREPROCESS_IMG_DIR,
-    #                                      batch_size=batch_size, validation_split=validation_split)
-    #balanced = sl.rebalance_data(creator.get_dataset('training'), 
-    #                             negative_ratio=negative_ratio)
-
-    # Number of samples per epoch must be a multiple of batch size. Thus we'll use the largest
-    # multiple of batch size possible. This wastes at most batch size amount of samples.
-    # Also limit training to 20000 images max due to time constraints.
-    num_train_samples = min(15000, len(balanced.index) * blowup) // batch_size * batch_size
-    num_val_samples = num_train_samples * validation_split
-
-    # Create callback functions during the long training process
     checkpt = gen_model_checkpoint()
     early_stopping = gen_early_stopping()
+    
+    history = model.fit(x=X_train, y=y_train,
+                        validation_data=(X_val, y_val),
+                        epochs=epochs, batch_size=batch_size,
+                        callbacks=[early_stopping, checkpt])
 
-    history = model.fit_generator(
-            creator.get_generator(dataset=balanced), 
-            steps_per_epoch=num_train_samples, epochs=epochs, 
-            validation_data=creator.get_generator('validation'), validation_steps=num_val_samples,
-            callbacks=[early_stopping, checkpt])
     logger.info("Successfully fit the model")
     
     model.save(c.MODELSTATE_DIR + '/' + c.MODEL_FILENAME)
@@ -101,8 +88,10 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset_name', default='ddsm')
+    parser.add_argument('--val_pct', type=float, default=0.1,
+                        help='Percentage of total data as validation set')
     parser.add_argument('--optimizer', default='adam')
-    parser.add_argument('--loss', default='binary_crossentropy')
+    parser.add_argument('--loss', default='categorical_crossentropy')
 
     args = parser.parse_args()
 

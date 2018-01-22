@@ -5,8 +5,7 @@ matplotlib
 pillow
 tqdm
 
-h5py
-
+opencv-python
 scikit-learn
 tensorflow
 tensorboard

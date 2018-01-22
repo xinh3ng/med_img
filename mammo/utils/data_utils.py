@@ -5,6 +5,8 @@ import re
 import glob
 import numpy as np
 import pandas as pd
+import cv2
+from PIL import Image
 from med_img.mammo.utils.generic_utils import create_logger
 
 pd.options.display.max_colwidth = 144
@@ -47,9 +49,53 @@ def create_image_sets(image_dir, labels, val_pct, test_pct, extension='LJPEG'):
         else:
             name = 'train'
         
-        label = filename_to_label(filename, labels)
-        row = pd.DataFrame([{'name': name, 'label': label, 'filename': filename}])
+        label = filename_to_label(filename, labels.keys())
+        row = pd.DataFrame([{'name': name, 'label': label, 'label_num': labels[label],  # numerical label
+                             'filename': filename}])
         image_sets = pd.concat([image_sets, row], axis=0)
     image_sets.reset_index(drop=True, inplace=True)
     logger.info('Successfully created image sets. Example: %s' % image_sets.head(5).to_string(line_width=144))
     return image_sets
+
+
+def load_image_data(image_sets, input_shape=(50, 50, 3)):
+    """Load the images as numpy arrays, reshape them accordingly
+    
+    X's shape should be (num_samples, height, width, channel)
+    """
+    
+    X, y = {}, {}
+
+    for name in ['train', 'val', 'test']:
+        filtered = image_sets[image_sets.name == name]
+        if len(filtered.index) == 0:  # if found no data
+            y[name], X[name] = None, None
+        else:
+            y[name] = filtered['label_num'].values
+            # Convert list of image files to a 4D numpy array
+            X[name] = _files_to_image_arrays(filtered['filename'].values, input_shape=input_shape)
+    
+    return (X['train'], y['train']), (X['val'], y['val']), (X['test'], y['test']) 
+
+
+def _files_to_image_arrays(filenames, input_shape):
+    """Convert a list of filenames to image (numpy) arrays
+    
+    X's shape should be (num_samples, input_shape)
+    """
+    X = []
+    for fn in filenames:
+        debug()
+        img = Image.open(fn)
+        img.show()
+        img = cv2.imread(fn)
+        img = cv2.resize(img, input_shape)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        # img = np.array(image).reshape((3,224,224))
+        img = img.astype('float32')
+        X.append(img)
+    assert X.shape == (len(filenames), 1) + input_shape, "X's shape is not (num_samples, height, width, channel)"
+    return X
+
+
+

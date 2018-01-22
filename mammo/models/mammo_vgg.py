@@ -29,18 +29,20 @@ def get_vgg16_model(use_relu):
 
 def gen_vgg16(input_shape, classes,
               include_top=True, weights=None,
-              optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy']):
+              optimizer='adam', loss='categorical_crossentropy', 
+              metrics=['accuracy']):
     """Instantiate the VGG16 architecture
     
-    :param include_top: whether to include the 3 fully-connected layers at the top of the network.
-    :param weights:
+    Args:
+        include_top: whether to include the 3 fully-connected layers at the top of the network.
+        weights:
     """
     logger.info('input_shape is %s, weights is %s' % (str(input_shape), weights))
             
     # Determine proper input shape based on tensorflow or theano as a backend
     assert K.backend() == 'tensorflow', 'Backend must be tensorflow but found otherwise'
     
-    model = VGG16(include_top=include_top, weights=weights,
+    model = VGG16(include_top=True, weights=weights,
                   input_shape=input_shape, pooling=None,
                   classes=classes)
     

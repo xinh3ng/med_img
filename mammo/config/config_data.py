@@ -3,9 +3,8 @@ import os
 
 data_config = {
     'ddsm': {
-        'labels': ['benign', 'normal', 'cancer'],
+        'labels': {'normal': 0, 'benign': 1, 'cancer': 2},
         'data_dir': '{}/data/DDSM/figment.csee.usf.edu/pub/DDSM/cases/'.format(os.environ['HOME']),
-        'input_shape': (224, 224, 3),
-        'model_file': 'trained.h5'
+        'input_shape': (50, 50, 3) # (224, 224, 3)
         }
     }
