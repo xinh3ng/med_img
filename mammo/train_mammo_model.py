@@ -3,7 +3,7 @@
 
 Procedure:
     Invoke virtual env (Python 3.6)
-    $ python train_mammo_vgg.py --dataset_name=mnist --model_name=cnn --optimizer=adam --loss=categorical_crossentropy
+    $ python train_mammo_model.py --dataset_name=mnist --model_name=cnn --optimizer=adam --loss=categorical_crossentropy
 """
 from pdb import set_trace as debug
 import os
@@ -63,8 +63,11 @@ def main(dataset_name='mias', model_name='vgg16',
     """Main function
     
     Args:
-        dataset_name: Name of the data set. Config file is indexed by using this field
-
+        dataset_name: Data source: mnist or mias or ddsm. Config file is indexed by using this field')
+        model_name: Clf model: cnn or vgg16
+        val_pct: Pct of data as validation set: 0.1
+        optimizer: Optimizer algorithm: adam
+        loss: Loss function used by optimizer: categorical_crossentropy or binary_crossentropy
     """    
     (X_train, y_train), (X_val, y_val), (X_test, y_test) = load_image_data_fn(dataset_name)(
             image_dir=data_config[dataset_name]['data_dir'], 
@@ -73,7 +76,7 @@ def main(dataset_name='mias', model_name='vgg16',
             test_pct=0.0,
             input_shape=data_config[dataset_name]['input_shape'])
     
-    # X = preprocess_input(X)
+    # X = preprocess_input(X)  # this is for VGG model
     
     # Generate the model instance
     classes = len(data_config[dataset_name]['labels'].keys())  # number of classes
@@ -108,13 +111,15 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset_name', default='mnist',
-                        help='mnist or mias or ddsm')
+                        help='Data source: mnist or mias or ddsm')
     parser.add_argument('--model_name', default='cnn',
-                        help='cnn or vgg16')
+                        help='Clf model: cnn or vgg16')
     parser.add_argument('--val_pct', type=float, default=0.1,
-                        help='Percentage of total data as validation set')
-    parser.add_argument('--optimizer', default='adam')
-    parser.add_argument('--loss', default='categorical_crossentropy')
+                        help='Pct of data as validation set')
+    parser.add_argument('--optimizer', default='adam',
+                        help='Optimizer algorithm: adam')
+    parser.add_argument('--loss', default='categorical_crossentropy',
+            help='Loss function used by optimizer: categorical_crossentropy or binary_crossentropy')
 
     args = parser.parse_args()
     main(**vars(args))

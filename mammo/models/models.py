@@ -13,14 +13,14 @@ from keras.layers import Flatten, Dense
 from keras.models import Sequential
 
 from med_img.mammo.utils.generic_utils import create_logger
-# from mammo_vgg_relu import gen_vgg16
+
  
 logger = create_logger(__name__, level='info')
 assert K.backend() == 'tensorflow', 'Backend must be tensorflow but found otherwise'
 
 
 def gen_model(model_name):
-    """Select the function that will load right model"""
+    """Factory function that selects the model"""
     x = {'vgg16': gen_vgg16,
          'cnn': gen_cnn
          }
@@ -41,7 +41,7 @@ def gen_vgg16(input_shape, classes,
     logger.info('optimizer, loss, and metrics: %s, %s, %s' % (str(optimizer), 
             str(loss), str(metrics)))
     
-    model = VGG16(include_top=True, weights=weights,
+    model = VGG16(include_top=include_top, weights=weights,
                   input_shape=input_shape, pooling=None,
                   classes=classes)
     
@@ -51,15 +51,13 @@ def gen_vgg16(input_shape, classes,
     return model
 
 
-def gen_cnn(input_shape, classes,
-            include_top=True, weights=None,
+def gen_cnn(input_shape, classes, weights=None,
             optimizer='adam', loss='categorical_crossentropy', 
-            metrics=['accuracy']):
+            metrics=['accuracy'], **kwargs):
     """Instantiate a simple CNN model
     
     https://github.com/keras-team/keras/blob/master/examples/mnist_cnn.py
     Args:
-        include_top: whether to include the 3 fully-connected layers at the top of the network.
         weights:
     """
     logger.info('input_shape is %s, weights is %s' % (str(input_shape), weights))
