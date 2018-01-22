@@ -3,7 +3,9 @@ from pdb import set_trace as debug
 import os
 import numpy as np
 import pandas as pd
-import cv2
+import keras
+from keras.applications.vgg16 import preprocess_input
+from keras.preprocessing.image import load_img, img_to_array
 
 from med_img.mammo.utils.generic_utils import create_logger
 
@@ -66,7 +68,7 @@ def load_image_data(image_dir, labels, val_pct, test_pct,
         else:
             # Convert list of image files to a 4D numpy array
             X[name] = _files_to_image_arrays(filtered['filename'].values, input_shape=input_shape)
-            y[name] = filtered['label_num'].values  # 
+            y[name] = keras.utils.to_categorical(filtered['label_num'].values, len(labels))
     
     logger.info("Successfully loaded image files as numpy arrays. Shape of X_train and y_train are: %s, %s"\
                 % (str(X['train'].shape), str(y['train'].shape)))
@@ -81,11 +83,10 @@ def _files_to_image_arrays(filenames, input_shape):
     """
     X = np.zeros((len(filenames),) + input_shape)
     idx = 0
-    for fn in filenames:
-        img = cv2.imread(fn, cv2.IMREAD_UNCHANGED)
-        img = cv2.resize(img, (input_shape[0], input_shape[1]))
-        img = img[..., np.newaxis]
-        
+    for fn in filenames:        
+        img = load_img(fn, target_size=(input_shape[0], input_shape[1]))  # PIL object
+        img = img_to_array(img)
+
         #new_img = np.zeros(input_shape)
         #new_img = cv2.normalize(img, new_img, 0, 255, cv2.NORM_MINMAX)
         # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)

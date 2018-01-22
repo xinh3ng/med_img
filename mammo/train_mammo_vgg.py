@@ -1,25 +1,31 @@
 # -*- coding: utf-8 -*-
+"""
+
+Procedure:
+    Invoke virtual env (Python 3.6)
+    $ python train_mammo_vgg.py --dataset_name=mnist --model_name=cnn --optimizer=adam --loss=categorical_crossentropy
+"""
 from pdb import set_trace as debug
 import os
-import numpy as np
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 
 from med_img.mammo.utils.generic_utils import create_logger
 import med_img.mammo.config.constants as c
 from med_img.mammo.config.config_data import data_config
-# import med_img.mammo.utils.simple_loader as sl
 import med_img.mammo.utils.data_utils_ddsm as ddsm
 import med_img.mammo.utils.data_utils_mias as mias
-from med_img.mammo.models.mammo_vgg import get_vgg16_model
+import med_img.mammo.utils.data_utils_mnist as mnist
+from med_img.mammo.models.models import gen_model
 
 logger = create_logger(__name__, level='info')
-seed = os.getenv('RANDOM_SEED', 1337) # Must use the RANDOM_SEED environment as specified in challenge guidelines.
+seed = os.getenv('RANDOM_SEED', 1337)  # Must use the RANDOM_SEED env as specified in challenge guidelines.
 
 
 def load_image_data_fn(dataset_name):
     """Select the function that will load the image file into numpy arrays"""
     x = {'ddsm': ddsm.load_image_data,
-         'mias': mias.load_image_data
+         'mias': mias.load_image_data,
+         'mnist': mnist.load_image_data
          }
     return x[dataset_name]
 
@@ -51,25 +57,27 @@ def save_train_metrics(history, metrics, filename):
     logger.info("Successfully saved metrics from the training process in " + filename)
 
 
-def main(dataset_name='ddsm',
+def main(dataset_name='mias', model_name='vgg16',
          use_relu=False, val_pct=0.1, batch_size=32, epochs=25,
          optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy']):
     """Main function
-
-    """
-    np.random.seed(int(seed))
-
-    classes = len(data_config[dataset_name]['labels'].keys())
     
+    Args:
+        dataset_name: Name of the data set. Config file is indexed by using this field
+
+    """    
     (X_train, y_train), (X_val, y_val), (X_test, y_test) = load_image_data_fn(dataset_name)(
             image_dir=data_config[dataset_name]['data_dir'], 
             labels=data_config[dataset_name]['labels'],
-            val_pct=val_pct, 
+            val_pct=val_pct,
             test_pct=0.0,
             input_shape=data_config[dataset_name]['input_shape'])
     
+    # X = preprocess_input(X)
+    
     # Generate the model instance
-    model = get_vgg16_model(use_relu)(
+    classes = len(data_config[dataset_name]['labels'].keys())  # number of classes
+    model = gen_model(model_name)(
             input_shape=data_config[dataset_name]['input_shape'], classes=classes,
             weights=None, optimizer=optimizer, loss=loss, metrics=metrics)
     logger.info("Print model summary:")
@@ -82,8 +90,11 @@ def main(dataset_name='ddsm',
                         validation_data=(X_val, y_val),
                         epochs=epochs, batch_size=batch_size,
                         callbacks=[early_stopping, checkpt])
-
     logger.info("Successfully fit the model")
+    
+    score = model.evaluate(X_val, y_val, verbose=0)
+    logger.info('Test loss: {}'.format(score[0]))
+    logger.info('Test accuracy: {}'.format(score[1]))
     
     model.save(c.MODELSTATE_DIR + '/' + c.MODEL_FILENAME)
     logger.info("Successfully saved the model")
@@ -96,13 +107,15 @@ def main(dataset_name='ddsm',
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset_name', default='mias')
+    parser.add_argument('--dataset_name', default='mnist',
+                        help='mnist or mias or ddsm')
+    parser.add_argument('--model_name', default='cnn',
+                        help='cnn or vgg16')
     parser.add_argument('--val_pct', type=float, default=0.1,
                         help='Percentage of total data as validation set')
     parser.add_argument('--optimizer', default='adam')
-    parser.add_argument('--loss', default='binary_crossentropy')
+    parser.add_argument('--loss', default='categorical_crossentropy')
 
     args = parser.parse_args()
-
     main(**vars(args))
     logger.info('ALL DOE\n')
