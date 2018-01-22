@@ -8,14 +8,24 @@ from med_img.mammo.utils.generic_utils import create_logger
 import med_img.mammo.config.constants as c
 from med_img.mammo.config.config_data import data_config
 # import med_img.mammo.utils.simple_loader as sl
-from med_img.mammo.utils.data_utils import create_image_sets, load_image_data
+import med_img.mammo.utils.data_utils_ddsm as ddsm
+import med_img.mammo.utils.data_utils_mias as mias
 from med_img.mammo.models.mammo_vgg import get_vgg16_model
 
 logger = create_logger(__name__, level='info')
 seed = os.getenv('RANDOM_SEED', 1337) # Must use the RANDOM_SEED environment as specified in challenge guidelines.
 
 
+def load_image_data_fn(dataset_name):
+    """Select the function that will load the image file into numpy arrays"""
+    x = {'ddsm': ddsm.load_image_data,
+         'mias': mias.load_image_data
+         }
+    return x[dataset_name]
+
+
 def gen_model_checkpoint():
+    """Create model checkpoint callback for model training"""
     return ModelCheckpoint(
             c.MODELSTATE_DIR + '/{epoch:02d}' + c.MODEL_FILENAME,
             monitor='val_loss', save_best_only=False, save_weights_only=False,
@@ -51,13 +61,12 @@ def main(dataset_name='ddsm',
 
     classes = len(data_config[dataset_name]['labels'].keys())
     
-    image_sets = create_image_sets(image_dir=data_config[dataset_name]['data_dir'], 
-                                   labels=data_config[dataset_name]['labels'],
-                                   val_pct=val_pct, test_pct=0.0)
-    (X_train, y_train), (X_val, y_val), (X_test, y_test) = load_image_data(image_sets, 
+    (X_train, y_train), (X_val, y_val), (X_test, y_test) = load_image_data_fn(dataset_name)(
+            image_dir=data_config[dataset_name]['data_dir'], 
+            labels=data_config[dataset_name]['labels'],
+            val_pct=val_pct, 
+            test_pct=0.0,
             input_shape=data_config[dataset_name]['input_shape'])
-    
-    debug()
     
     # Generate the model instance
     model = get_vgg16_model(use_relu)(
@@ -87,11 +96,11 @@ def main(dataset_name='ddsm',
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset_name', default='ddsm')
+    parser.add_argument('--dataset_name', default='mias')
     parser.add_argument('--val_pct', type=float, default=0.1,
                         help='Percentage of total data as validation set')
     parser.add_argument('--optimizer', default='adam')
-    parser.add_argument('--loss', default='categorical_crossentropy')
+    parser.add_argument('--loss', default='binary_crossentropy')
 
     args = parser.parse_args()
 
