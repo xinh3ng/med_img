@@ -4,6 +4,7 @@ pandas
 matplotlib
 pillow
 tqdm
+joblib
 
 opencv-python
 scikit-learn

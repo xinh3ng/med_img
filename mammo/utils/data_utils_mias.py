@@ -3,8 +3,8 @@ from pdb import set_trace as debug
 import os
 import numpy as np
 import pandas as pd
+from joblib import Parallel, delayed
 import keras
-from keras.applications.vgg16 import preprocess_input
 from keras.preprocessing.image import load_img, img_to_array
 
 from med_img.mammo.utils.generic_utils import create_logger
@@ -67,7 +67,7 @@ def load_image_data(image_dir, labels, val_pct, test_pct,
             y[name], X[name] = None, None
         else:
             # Convert list of image files to a 4D numpy array
-            X[name] = _files_to_image_arrays(filtered['filename'].values, input_shape=input_shape)
+            X[name] = files_to_image_arrays(filtered['filename'].values, input_shape=input_shape)
             y[name] = keras.utils.to_categorical(filtered['label_num'].values, len(labels))
     
     logger.info("Successfully loaded image files as numpy arrays. Shape of X_train and y_train are: %s, %s"\
@@ -76,25 +76,28 @@ def load_image_data(image_dir, labels, val_pct, test_pct,
     return (X['train'], y['train']), (X['val'], y['val']), (X['test'], y['test']) 
 
 
-def _files_to_image_arrays(filenames, input_shape):
+def files_to_image_arrays(filenames, input_shape):
     """Convert a list of filenames to image (numpy) arrays
     
     X's shape should be (num_samples, input_shape)
-    """
-    X = np.zeros((len(filenames),) + input_shape)
-    idx = 0
-    for fn in filenames:        
-        img = load_img(fn, target_size=(input_shape[0], input_shape[1]))  # PIL object
-        img = img_to_array(img)
-
-        #new_img = np.zeros(input_shape)
-        #new_img = cv2.normalize(img, new_img, 0, 255, cv2.NORM_MINMAX)
-        # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        # new_img = new_img.astype('float32')
-        
-        # cv2.imshow("Show by CV2",  new_img); cv2.waitKey()
-        new_img = img
-        X[idx, ...] = new_img
-        idx += 1
-
+    """    
+    logger.info("Start to convert %d image files to numpy arrays" % len(filenames))        
+    input_shape_array = [input_shape for _ in range(len(filenames))]
+    X = Parallel(n_jobs=-1)(delayed(file_to_array)(fn, s) for fn, s in zip(filenames, input_shape_array))
+    X = np.array(X)
+    logger.info("Successfully converted image files to numpy arrays")
     return X
+
+
+def file_to_array(filename, input_shape):
+    img = load_img(filename, target_size=(input_shape[0], input_shape[1]))  # PIL object
+    img = img_to_array(img)
+
+    #new_img = np.zeros(input_shape)
+    #new_img = cv2.normalize(img, new_img, 0, 255, cv2.NORM_MINMAX)
+    # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    # new_img = new_img.astype('float32')
+    
+    # cv2.imshow("Show by CV2",  new_img); cv2.waitKey()
+    new_img = img
+    return new_img

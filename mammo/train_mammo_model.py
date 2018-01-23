@@ -15,7 +15,7 @@ from med_img.mammo.config.config_data import data_config
 import med_img.mammo.utils.data_utils_ddsm as ddsm
 import med_img.mammo.utils.data_utils_mias as mias
 import med_img.mammo.utils.data_utils_mnist as mnist
-from med_img.mammo.models.models import gen_model
+from med_img.mammo.models.models import select_model_processor
 
 logger = create_logger(__name__, level='info')
 seed = os.getenv('RANDOM_SEED', 1337)  # Must use the RANDOM_SEED env as specified in challenge guidelines.
@@ -80,15 +80,16 @@ def main(dataset_name='mias', model_name='vgg16',
     
     # Generate the model instance
     classes = len(data_config[dataset_name]['labels'].keys())  # number of classes
-    model = gen_model(model_name)(
+    model_processor = select_model_processor(model_name)(
             input_shape=data_config[dataset_name]['input_shape'], classes=classes,
             weights=None, optimizer=optimizer, loss=loss, metrics=metrics)
-    logger.info("Print model summary:")
-    model.summary()  # print model summary
+    model = model_processor.create_model(verbose=1)
     
     checkpt = gen_model_checkpoint()
     early_stopping = gen_early_stopping()
     
+    X_train, y_train = model_processor.process_X(X_train), model_processor.process_y(y_train)
+    X_val, y_val = model_processor.process_X(X_val), model_processor.process_y(y_val)    
     history = model.fit(x=X_train, y=y_train,
                         validation_data=(X_val, y_val),
                         epochs=epochs, batch_size=batch_size,
@@ -96,8 +97,8 @@ def main(dataset_name='mias', model_name='vgg16',
     logger.info("Successfully fit the model")
     
     score = model.evaluate(X_val, y_val, verbose=0)
-    logger.info('Test loss: {}'.format(score[0]))
-    logger.info('Test accuracy: {}'.format(score[1]))
+    logger.info('Validation loss: {}'.format(score[0]))
+    logger.info('Validation accuracy: {}'.format(score[1]))
     
     model.save(c.MODELSTATE_DIR + '/' + c.MODEL_FILENAME)
     logger.info("Successfully saved the model")
@@ -110,7 +111,7 @@ def main(dataset_name='mias', model_name='vgg16',
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset_name', default='mnist',
+    parser.add_argument('--dataset_name', default='mias',
                         help='Data source: mnist or mias or ddsm')
     parser.add_argument('--model_name', default='cnn',
                         help='Clf model: cnn or vgg16')
