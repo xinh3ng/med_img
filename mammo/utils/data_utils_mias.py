@@ -6,8 +6,8 @@ import pandas as pd
 from joblib import Parallel, delayed
 import keras
 from keras.preprocessing.image import load_img, img_to_array
+from pydsutils.generic import create_logger
 
-from med_img.mammo.utils.generic_utils import create_logger
 
 pd.options.display.max_colwidth = 144
 logger = create_logger(__name__)

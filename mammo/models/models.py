@@ -2,60 +2,38 @@
 """
 
 Models include:
-    CNN
-    VGG16 model
+  CNN
+  VGG16
+Usage:
+  $ python train_mammo_model.py --dataset_name=mias --model_name=tfvgg16 --optimizer=adam --loss=categorical_crossentropy
 """
 from pdb import set_trace as debug
-from typing import Type
-from keras import backend as K
 from keras.applications.vgg16 import VGG16
 from keras.layers import Conv2D, MaxPooling2D, Dropout
 from keras.layers import Flatten, Dense
 from keras.models import Sequential
 from keras.applications.vgg16 import preprocess_input
+import torchvision.models
 
-from med_img.mammo.utils.generic_utils import create_logger
+from pydsutils.generic import create_logger
+
+from med_img.mammo.models.base_models import BaseModelOperator
 
 
 logger = create_logger(__name__, level='info')
-assert K.backend() == 'tensorflow', 'Backend must be tensorflow but found otherwise'
 
+#####################################################
+# Model operators. Goals include:
+#   Preprocess input data: normalize, one-hot encoding, outliers, etc.
+#   Create a model of choice
+#####################################################
 
-class BaseModelOperator(object):
-    def __init__(self, input_shape, classes, include_top, weights, optimizer, loss, metrics):
-        """
-        
-        Args:
-            include_top: whether to include the 3 fully-connected layers at the top of the network.
-            weights:
-        """
-        self.input_shape = input_shape
-        self.classes = classes
-        self.include_top = include_top
-        self.weights = weights
-        self.optimizer = optimizer
-        self.loss = loss
-        self.metrics = metrics
-        logger.info('input_shape is %s, weights is %s' % (str(self.input_shape), self.weights))
-        logger.info('optimizer, loss, and metrics: %s, %s, %s' % (str(self.optimizer), 
-                str(self.loss), str(self.metrics)))
-    
-    def create_model(self):
-        raise NotImplementedError
-    
-    def process_X(self, X):
-        return X
-    
-    def process_y(self, y):
-        return y
-
-
-class VGG16ModelOperator(BaseModelOperator):
+class TfVgg16ModelOperator(BaseModelOperator):
     def __init__(self, input_shape, classes,
                  include_top=True, weights=None,
                  optimizer='adam', loss='categorical_crossentropy', 
                  metrics=['accuracy']):
-        super(VGG16ModelOperator, self).__init__(input_shape, classes, include_top, weights,
+        super(TfVgg16ModelOperator, self).__init__(input_shape, classes, include_top, weights,
                                                  optimizer, loss, metrics)
         
     def create_model(self, verbose=0):
@@ -78,16 +56,16 @@ class VGG16ModelOperator(BaseModelOperator):
         return preprocess_input(X)  # for vgg16 only
     
 
-class SimpleCNNModelOperator(BaseModelOperator):
+class TfSimpleCnnModelOperator(BaseModelOperator):
     def __init__(self, input_shape, classes,
                  include_top=True, weights=None,
                  optimizer='adam', loss='categorical_crossentropy', 
                  metrics=['accuracy']):
-        super(SimpleCNNModelOperator, self).__init__(input_shape, classes, include_top, weights,
+        super(TfSimpleCnnModelOperator, self).__init__(input_shape, classes, include_top, weights,
                                                      optimizer, loss, metrics)
 
     def create_model(self, verbose=0):
-        """Instantiate a simple CNN model
+        """Instantiate a simple Cnn model
         
         https://github.com/keras-team/keras/blob/master/examples/mnist_cnn.py
         """    
@@ -109,12 +87,33 @@ class SimpleCNNModelOperator(BaseModelOperator):
         return model
 
 
-###################
-# Helper functions
-###################
-def select_model_operator(model_name: str) -> Type[BaseModelOperator]:
-    """Factory function that selects the model"""
-    x = {'vgg16': VGG16ModelOperator,
-         'cnn': SimpleCNNModelOperator
-         }
-    return x.get(model_name, BaseModelOperator)
+class TorchVgg16ModelOperator(BaseModelOperator):
+    def __init__(self, input_shape, classes,
+                 include_top=True, weights=None,
+                 optimizer='adam', loss='categorical_crossentropy',
+                 metrics=['accuracy']):
+        super(TorchVgg16ModelOperator, self).__init__(input_shape, classes, include_top, weights,
+                                                       optimizer, loss, metrics)
+
+    def create_model(self, verbose=0):
+
+        model = torchvision.models.vgg16()
+        if verbose >= 1:
+            logger.info("Print model summary:")
+            model.summary()  # print model summary
+        return model
+
+#####################################################
+
+class ModelOutput(object):
+    """Class to standardize the model output
+
+    """
+    def __init__(self, model_output):
+        self.model_output = model_output  # model_output in its native tf or torch format
+        self.history = model_output.get("history", None)
+
+    @property
+    def history(self):
+        return self.history
+

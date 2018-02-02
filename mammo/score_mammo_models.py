@@ -6,10 +6,11 @@ from pdb import set_trace as debug
 import os
 import pandas as pd
 import keras.models as km
+from pydsutils.generic import create_logger
 
 import med_img.mammo.utils.constants as c
 import med_img.mammo.utils.simple_loader as sl
-from med_img.mammo.utils.generic_utils import create_logger
+
 
 logger  = create_logger(__name__, level='info')
 

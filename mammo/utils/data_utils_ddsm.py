@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import cv2
 from PIL import Image
-from med_img.mammo.utils.generic_utils import create_logger
+from pydsutils.generic import create_logger
 
 pd.options.display.max_colwidth = 144
 logger = create_logger(__name__)

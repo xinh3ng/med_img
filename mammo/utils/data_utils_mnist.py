@@ -4,7 +4,7 @@ from typing import Any, Tuple
 import numpy as np
 import keras
 from keras.datasets import mnist
-from med_img.mammo.utils.generic_utils import create_logger
+from pydsutils.generic import create_logger
 
 logger = create_logger(__name__)
 

@@ -99,6 +99,9 @@ ENV/
 # Spyder project settings
 .spyderproject
 
+# vscode
+.vscode/
+
 # R project settings
 .RData
 *.RData
