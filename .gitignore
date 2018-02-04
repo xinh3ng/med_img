@@ -1,4 +1,5 @@
 # Document files
+results/
 *.zip
 *.gz
 *.pdf
@@ -37,6 +38,9 @@ var/
 
 # Pycharm
 .idea/
+
+# vim
+*.sw[p|o]
 
 # PyInstaller
 #  Usually these files are written by a python script from a template

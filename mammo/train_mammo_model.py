@@ -20,13 +20,14 @@ logger = create_logger(__name__, level='info')
 def gen_model_checkpoint():
     """Create model checkpoint callback for model training"""
     return ModelCheckpoint(
-            c.MODEL_STATE_DIR + '/{epoch:02d}' + c.MODEL_FILENAME,
+            c.model_state_dir + '/{epoch:04d}' + c.model_filename,
             monitor='val_loss', save_best_only=False, save_weights_only=False,
             mode='auto', period=1, verbose=1)
 
 
 def gen_early_stopping():
-    """Generate early stopping callback"""
+    """Generate early stopping callback
+    """
     return EarlyStopping(monitor='val_loss', min_delta=0.1, patience=1, 
                          verbose=1, mode='auto')
 
@@ -35,14 +36,15 @@ def save_train_metrics(history, metrics, filename):
     """Save metrics from the training process for later visualization"""
 
     with open(filename, 'w') as f:
+        metrics = ['loss']
         for metric in metrics:
             f.write('train {}\n'.format(metric))
             f.write(', '.join(str(x) for x in history.history[metric]))
             f.write('\n')
             f.write('validation {}\n'.format(metric))
             f.write(', '.join(str(x) for x in history.history['val_' + metric]))
-            f.write('\n\n\n')
-    logger.info("Successfully saved metrics from the training process in " + filename)
+            f.write('\n')
+    logger.info("Successfully saved metrics from the training process in file: " + filename)
 
 
 def main(dataset_name='mias', model_name='vgg16',
@@ -89,18 +91,19 @@ def main(dataset_name='mias', model_name='vgg16',
     history = model.fit(x=X_train, y=y_train,
                         validation_data=(X_val, y_val),
                         epochs=epochs, batch_size=batch_size,
-                        callbacks=[early_stopping, checkpt])
+                        callbacks=[early_stopping, checkpt],
+                        verbose=2)
     logger.info("Successfully fit the model")
     
     score = model.evaluate(X_val, y_val, verbose=0)
     logger.info('Validation loss: {}'.format(score[0]))
     logger.info('Validation accuracy: {}'.format(score[1]))
     
-    model.save(c.MODEL_STATE_DIR + '/' + c.MODEL_FILENAME)
+    model.save(c.model_state_dir + '/' + c.model_filename)
     logger.info("Successfully saved the model")
 
     # Save metrics from the training process for later visualization
-    save_train_metrics(history, metrics, filename=c.MODEL_STATE_DIR + '/plot.txt')
+    save_train_metrics(history, metrics, filename=c.model_state_dir + '/plot.txt')
     return
 
 

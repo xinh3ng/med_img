@@ -5,10 +5,14 @@ matplotlib
 pillow
 tqdm
 joblib
+h5py
 
 opencv-python
+opencv-contrib-python
 scikit-learn
 tensorflow
+tensorflow-gpu
 keras
-http://download.pytorch.org/whl/torch-0.3.0.post4-cp36-cp36m-macosx_10_7_x86_64.whl
+http://download.pytorch.org/whl/cu90/torch-0.3.0.post4-cp36-cp36m-linux_x86_64.whl 
 torchvision
+
