@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from pdb import set_trace as debug
 import os
+from typing import Any
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
@@ -52,8 +53,8 @@ def create_image_sets(image_dir, labels, val_pct, test_pct, extension='pgm'):
     return image_sets
 
 
-def load_image_data(image_dir, labels, val_pct, test_pct,
-                    input_shape):
+def load_image_data(image_dir, labels, val_pct, test_pct, input_shape,  
+        *args: Any, **kwargs: Any):
     """Load the images as numpy arrays, reshape them accordingly
     
     X's shape should be (num_samples, height, width, channel)
@@ -70,9 +71,6 @@ def load_image_data(image_dir, labels, val_pct, test_pct,
             X[name] = files_to_image_arrays(filtered['filename'].values, input_shape=input_shape)
             y[name] = keras.utils.to_categorical(filtered['label_num'].values, len(labels))
     
-    logger.info("Successfully loaded image files as numpy arrays. Shape of X_train and y_train are: %s, %s"\
-                % (str(X['train'].shape), str(y['train'].shape)))
-    logger.info("Shape of X_val and y_val are: %s, %s" % (str(X['val'].shape), str(y['val'].shape)))
     return (X['train'], y['train']), (X['val'], y['val']), (X['test'], y['test']) 
 
 

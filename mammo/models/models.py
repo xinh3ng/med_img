@@ -29,11 +29,11 @@ logger = create_logger(__name__, level='info')
 #####################################################
 
 class TfVgg16ModelOperator(BaseModelOperator):
-    def __init__(self, input_shape, classes,
+    def __init__(self, input_shape, num_classes,
                  include_top=True, weights=None,
                  optimizer='adam', loss='categorical_crossentropy', 
                  metrics=['accuracy']):
-        super(TfVgg16ModelOperator, self).__init__(input_shape, classes, include_top, weights,
+        super(TfVgg16ModelOperator, self).__init__(input_shape, num_classes, include_top, weights,
                                                  optimizer, loss, metrics)
         
     def create_model(self, verbose=0):
@@ -42,7 +42,7 @@ class TfVgg16ModelOperator(BaseModelOperator):
         """
         model = VGG16(include_top=self.include_top, weights=self.weights,
                       input_shape=self.input_shape, pooling=None,
-                      classes=self.classes)
+                      num_classes=self.num_classes)
         
         model.compile(optimizer=self.optimizer, loss=self.loss,
                       metrics=self.metrics)
@@ -57,11 +57,11 @@ class TfVgg16ModelOperator(BaseModelOperator):
     
 
 class TfSimpleCnnModelOperator(BaseModelOperator):
-    def __init__(self, input_shape, classes,
+    def __init__(self, input_shape, num_classes,
                  include_top=True, weights=None,
                  optimizer='adam', loss='categorical_crossentropy', 
                  metrics=['accuracy']):
-        super(TfSimpleCnnModelOperator, self).__init__(input_shape, classes, include_top, weights,
+        super(TfSimpleCnnModelOperator, self).__init__(input_shape, num_classes, include_top, weights,
                                                      optimizer, loss, metrics)
 
     def create_model(self, verbose=0):
@@ -77,7 +77,7 @@ class TfSimpleCnnModelOperator(BaseModelOperator):
         model.add(Flatten())
         model.add(Dense(128, activation='relu'))
         model.add(Dropout(0.5))
-        model.add(Dense(self.classes, activation='softmax'))
+        model.add(Dense(self.num_classes, activation='softmax'))
     
         model.compile(loss=self.loss, optimizer=self.optimizer, metrics=self.metrics)
         logger.info("Successfully compiled the model")
@@ -88,11 +88,11 @@ class TfSimpleCnnModelOperator(BaseModelOperator):
 
 
 class TorchVgg16ModelOperator(BaseModelOperator):
-    def __init__(self, input_shape, classes,
+    def __init__(self, input_shape, num_classes,
                  include_top=True, weights=None,
                  optimizer='adam', loss='categorical_crossentropy',
                  metrics=['accuracy']):
-        super(TorchVgg16ModelOperator, self).__init__(input_shape, classes, include_top, weights,
+        super(TorchVgg16ModelOperator, self).__init__(input_shape, num_classes, include_top, weights,
                                                        optimizer, loss, metrics)
 
     def create_model(self, verbose=0):

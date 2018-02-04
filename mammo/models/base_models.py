@@ -13,7 +13,7 @@ class BaseModelOperator(object):
     """Base class of model operators
 
     """
-    def __init__(self, input_shape, classes, include_top, weights, optimizer, loss, metrics):
+    def __init__(self, input_shape, num_classes, include_top, weights, optimizer, loss, metrics):
         """
         
         Args:
@@ -21,7 +21,7 @@ class BaseModelOperator(object):
             weights:
         """
         self.input_shape = input_shape
-        self.classes = classes
+        self.num_classes = num_classes
         self.include_top = include_top
         self.weights = weights
         self.optimizer = optimizer
