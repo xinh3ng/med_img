@@ -65,7 +65,6 @@ def load_image_data(image_sets, input_shape=(50, 50, 3)):
     """
     
     X, y = {}, {}
-
     for name in ['train', 'val', 'test']:
         filtered = image_sets[image_sets.name == name]
         if len(filtered.index) == 0:  # if found no data

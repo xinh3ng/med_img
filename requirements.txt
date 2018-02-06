@@ -6,6 +6,8 @@ pillow
 tqdm
 joblib
 h5py
+https://github.com/xinh3ng/pydsutils/raw/master/packages/pydsutils-0.6.0-py2.py3-none-any.whl
+https://github.com/xinh3ng/pymlearn/raw/master/packages/pymlearn-0.7.1-py2.py3-none-any.whl
 
 opencv-python
 opencv-contrib-python
@@ -13,6 +15,5 @@ scikit-learn
 tensorflow
 tensorflow-gpu
 keras
-http://download.pytorch.org/whl/cu90/torch-0.3.0.post4-cp36-cp36m-linux_x86_64.whl 
+# http://download.pytorch.org/whl/cu90/torch-0.3.0.post4-cp36-cp36m-linux_x86_64.whl
 torchvision
-

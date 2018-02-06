@@ -9,6 +9,7 @@ Procedure:
 from pdb import set_trace as debug
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 from pydsutils.generic import create_logger
+from pymlearn.dl_utils import TfMemoryUsage
 
 import med_img.mammo.config.constants as c
 from med_img.mammo.config.config_data import data_config
@@ -18,9 +19,9 @@ from med_img.mammo.models.model_operation import select_model_operator, select_m
 logger = create_logger(__name__, level='info')
 
 
-def load_data(data_src, image_dir, labels, val_pct, test_pct, input_shape):
+def load_data(data_src, sample_sizes, image_dir, labels, val_pct, test_pct, input_shape):
     (X_train, y_train), (X_val, y_val), (X_test, y_test) = load_image_data_fn(data_src)(
-            image_dir=image_dir, labels=labels,
+            sample_sizes=sample_sizes, image_dir=image_dir, labels=labels,
             val_pct=val_pct, test_pct=0.0,
             input_shape=input_shape)
     logger.info("Successfully loaded image files as numpy arrays. Shape of X_train and y_train are: %s, %s"\
@@ -29,14 +30,15 @@ def load_data(data_src, image_dir, labels, val_pct, test_pct, input_shape):
     return (X_train, y_train), (X_val, y_val), (X_test, y_test)
 
 
-def gen_callbacks(filename, metric, min_delta=0.01, verbose=1):
+def gen_callbacks(filename, metric, min_delta, verbose=1):
     """Generate callback functions
     """
     checkpt = ModelCheckpoint(filename, monitor=metric, save_best_only=False, period=1,
             verbose=verbose)
     stopping = EarlyStopping(monitor=metric, min_delta=min_delta, patience=1, 
             verbose=verbose)
-    return [checkpt, stopping]
+    memory = TfMemoryUsage(show_batch_begin=False, show_batch_end=False)
+    return [memory, checkpt, stopping]
 
     
 def save_train_metrics(history, metrics, filename):
@@ -54,21 +56,23 @@ def save_train_metrics(history, metrics, filename):
     logger.info("Successfully saved metrics from the training process in file: " + filename)
 
 
-def main(data_src='mnist', model_name='vgg16',
+def main(data_src='mnist', sample_sizes='0,0', model_name='vgg16',
          use_relu=False, val_pct=0.1, batch_size=32, epochs=25,
          optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy']):
     """Main function
     
     Args:
         data_src: Data source: mnist or mias or ddsm. Config file is indexed by using this field')
+        sample_sizes: Total size of training and validation sets. 0 means all samples
         model_name: Clf model: cnn or vgg16
         val_pct: Pct of data as validation set: 0.1
         optimizer: Optimizer algorithm: adam
         loss: Loss function used by optimizer: categorical_crossentropy or binary_crossentropy
     """
+    sample_sizes = tuple([int(x) for x in sample_sizes.split(',')])
     input_shape = data_config[data_src]['input_shape']
     (X_train, y_train), (X_val, y_val), (X_test, y_test) = load_data(
-            data_src,
+            data_src, sample_sizes,
             image_dir=data_config[data_src]['data_dir'], 
             labels=data_config[data_src]['labels'],
             val_pct=val_pct, test_pct=0.0,
@@ -101,8 +105,8 @@ def main(data_src='mnist', model_name='vgg16',
     logger.info("Successfully fit the model")
     
     score = model.evaluate(X_val, y_val, verbose=0)
-    logger.info('Validation loss: {}'.format(score[0]))
-    logger.info('Validation accuracy: {}'.format(score[1]))
+    logger.info('Validation loss: {0:.6f}'.format(score[0]))
+    logger.info('Validation accuracy: {0:.6f}'.format(score[1]))
     
     model.save(c.model_state_dir + '/' + c.model_filename)
     logger.info("Successfully saved the model")
@@ -117,8 +121,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_src', default='mnist', 
             help='Data source: mnist cifar10, or mias or ddsm')
+    parser.add_argument('--sample_sizes', default='0,0', 
+            help='Total size of train and validation')
     parser.add_argument('--model_name', default='tfcnn',
             help='Clf model: tfcnn or tfvgg16 or torchcnn')
+    parser.add_argument('--epochs', type=int, default=25)
+    parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--val_pct', type=float, default=0.1, help='Pct of data as validation set')
     parser.add_argument('--optimizer', default='adam',
             help='Optimizer algorithm: adam')
