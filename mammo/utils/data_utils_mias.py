@@ -11,10 +11,8 @@ from pydsutils.generic import create_logger
 
 pd.options.display.max_colwidth = 144
 logger = create_logger(__name__)
-seed = 0
-np.random.seed(seed)
 
-    
+
 def create_image_sets(image_dir, labels, val_pct, test_pct, extension='pgm'):
     """Builds a list of training images from the file system
     
@@ -38,7 +36,7 @@ def create_image_sets(image_dir, labels, val_pct, test_pct, extension='pgm'):
     image_sets['label'] = 'cancer'
     image_sets.loc[image_sets.label_long == 'NORM', 'label'] = 'normal'    
     image_sets['label_num'] = 1.0  # label in numerical format
-    image_sets.loc[image_sets.label == 'normal', 'label_num'] = 0.0
+    image_sets.loc[image_sets.label == 'normal', 'label_num'] = 0.0  # normal = 0
     
     # Create train / val label
     image_sets['name'] = 'train'

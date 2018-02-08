@@ -7,6 +7,8 @@ Procedure:
   $ python train_mammo_model.py --data_src=mnist --model_name=tfcnn --optimizer=adam --loss=categorical_crossentropy
 """
 from pdb import set_trace as debug
+import numpy as np
+from matplotlib import pyplot as plt
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 from pydsutils.generic import create_logger
 from pymlearn.dl_utils import TfMemoryUsage
@@ -17,9 +19,12 @@ from med_img.mammo.utils.data_utils import load_image_data_fn
 from med_img.mammo.models.model_operation import select_model_operator, select_model_data_validator
 
 logger = create_logger(__name__, level='info')
+np.set_printoptions(precision=4)
 
 
 def load_data(data_src, sample_sizes, image_dir, labels, val_pct, test_pct, input_shape):
+    """Load the model data from factory function: load_image_data_fn
+    """
     (X_train, y_train), (X_val, y_val), (X_test, y_test) = load_image_data_fn(data_src)(
             sample_sizes=sample_sizes, image_dir=image_dir, labels=labels,
             val_pct=val_pct, test_pct=0.0,

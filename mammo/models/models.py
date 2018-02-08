@@ -42,7 +42,7 @@ class TfVgg16ModelOperator(BaseModelOperator):
         """
         model = VGG16(include_top=self.include_top, weights=self.weights,
                       input_shape=self.input_shape, pooling=None,
-                      num_classes=self.num_classes)
+                      classes=self.num_classes)
         
         model.compile(optimizer=self.optimizer, loss=self.loss,
                       metrics=self.metrics)

@@ -6,13 +6,11 @@ import glob
 import numpy as np
 import pandas as pd
 import cv2
-from PIL import Image
+import pyglet
 from pydsutils.generic import create_logger
 
 pd.options.display.max_colwidth = 144
 logger = create_logger(__name__)
-seed = 0
-np.random.seed(seed)
 
 
 def filename_to_label(filename, labels):
