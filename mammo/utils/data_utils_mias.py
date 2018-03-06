@@ -9,19 +9,43 @@ import keras
 from keras.preprocessing.image import load_img, img_to_array
 from pydsutils.generic import create_logger
 
+from med_img.mammo.config import data_config as dc
+
 pd.options.display.max_colwidth = 144
 logger = create_logger(__name__)
+image_dir = dc.src_data_configs['mias']['data_dir']
+labels = dc.src_data_configs['mias']['labels']
+NJOBS = -1  # for multi processing
 
 
-def create_image_sets(image_dir, labels, val_pct, test_pct, extension='pgm'):
+def load_image_data(val_pct, test_pct, input_shape,
+                    *args: Any, **kwargs: Any):
+    """Main function: Load the images as numpy arrays, reshape them accordingly
+
+    X's shape should be (num_samples, height, width, channel)
+    """
+    image_sets = create_image_sets(val_pct, test_pct, extension='pgm')
+
+    X, y = {}, {}
+    for name in ['train', 'val', 'test']:
+        filtered = image_sets[image_sets.name == name]
+        if len(filtered) == 0:  # if found no data
+            y[name], X[name] = None, None
+        else:
+            # Convert list of image files to a 4D numpy array
+            X[name] = files_to_image_arrays(filtered['filename'].values, input_shape=input_shape)
+            y[name] = keras.utils.to_categorical(filtered['label_num'].values, len(labels))
+
+    return (X['train'], y['train']), (X['val'], y['val']), (X['test'], y['test'])
+
+
+def create_image_sets(val_pct, test_pct, extension='pgm'):
     """Builds a list of training images from the file system
     
     Analyzes the sub folders in the image directory, splits them by train / val / test and returns a data 
     structure describing the lists of images for each label.
     
     Args:
-        image_dir: A folder containing subfolders of images.
-        labels: True label of the image given by the long filename
         test_pct: Percentage of the images to reserve for tests.
         val_pct: Percentage of images reserved for validation.
     """
@@ -50,41 +74,24 @@ def create_image_sets(image_dir, labels, val_pct, test_pct, extension='pgm'):
     return image_sets
 
 
-def load_image_data(image_dir, labels, val_pct, test_pct, input_shape,  
-        *args: Any, **kwargs: Any):
-    """Load the images as numpy arrays, reshape them accordingly
-    
-    X's shape should be (num_samples, height, width, channel)
-    """
-    image_sets = create_image_sets(image_dir, labels, val_pct, test_pct, extension='pgm')
-    
-    X, y = {}, {}
-    for name in ['train', 'val', 'test']:
-        filtered = image_sets[image_sets.name == name]
-        if len(filtered) == 0:  # if found no data
-            y[name], X[name] = None, None
-        else:
-            # Convert list of image files to a 4D numpy array
-            X[name] = files_to_image_arrays(filtered['filename'].values, input_shape=input_shape)
-            y[name] = keras.utils.to_categorical(filtered['label_num'].values, len(labels))
-    
-    return (X['train'], y['train']), (X['val'], y['val']), (X['test'], y['test']) 
-
-
-def files_to_image_arrays(filenames, input_shape):
+def files_to_image_arrays(filenames, input_shape, n_jobs=NJOBS):
     """Convert a list of filenames to image (numpy) arrays
     
     X's shape should be (num_samples, input_shape)
     """    
     logger.info("Start to convert %d image files to numpy arrays" % len(filenames))        
     input_shape_array = [input_shape for _ in range(len(filenames))]
-    X = Parallel(n_jobs=-1)(delayed(file_to_array)(fn, s) for fn, s in zip(filenames, input_shape_array))
+    X = Parallel(n_jobs=n_jobs)(delayed(file_to_array)(fn, s) for fn, s in \
+                                zip(filenames, input_shape_array))
     X = np.array(X)
     logger.info("Successfully converted image files to numpy arrays")
     return X
 
 
 def file_to_array(filename, input_shape):
+    """Convert a single file to image (numpy array)
+
+    """
     img = load_img(filename, target_size=(input_shape[0], input_shape[1]))  # PIL object
     img = img_to_array(img)
 

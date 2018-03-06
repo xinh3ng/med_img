@@ -1,20 +1,20 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""
+"""Train the mammograms
 
-Procedure:
-  $ source ../venv/bin/activate (python 3.6)
-  $ source ../scripts/setenv.sh (Set environement variables like PYTHONPATH
+PROCEDURE:
+  $ source venv/bin/activate (python 3.6)
+  $ source scripts/setenv.sh (Set environement variables like PYTHONPATH
+  $ cd mammo/
   $ python train_mammo_model.py --data_src=mnist --model_name=tfcnn --optimizer=adam --loss=categorical_crossentropy
 """
 from pdb import set_trace as debug
 import numpy as np
-from matplotlib import pyplot as plt
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 from pydsutils.generic import create_logger
 from pymlearn.dl_utils import TfMemoryUsage
 
-import med_img.mammo.config.constants as c
-from med_img.mammo.config.config_data import data_config
+from med_img.mammo.config import data_config as dc
 from med_img.mammo.utils.data_utils import load_image_data_fn
 from med_img.mammo.models.model_operation import select_model_operator, select_model_data_validator
 
@@ -22,11 +22,11 @@ logger = create_logger(__name__, level='info')
 np.set_printoptions(precision=4)
 
 
-def load_data(data_src, sample_sizes, image_dir, labels, val_pct, test_pct, input_shape):
+def load_data(data_src, sample_sizes, val_pct, test_pct, input_shape):
     """Load the model data from factory function: load_image_data_fn
     """
     (X_train, y_train), (X_val, y_val), (X_test, y_test) = load_image_data_fn(data_src)(
-            sample_sizes=sample_sizes, image_dir=image_dir, labels=labels,
+            sample_sizes=sample_sizes,
             val_pct=val_pct, test_pct=0.0,
             input_shape=input_shape)
     logger.info("Successfully loaded image files as numpy arrays. Shape of X_train and y_train are: %s, %s"\
@@ -75,24 +75,23 @@ def main(data_src='mnist', sample_sizes='0,0', model_name='vgg16',
         loss: Loss function used by optimizer: categorical_crossentropy or binary_crossentropy
     """
     sample_sizes = tuple([int(x) for x in sample_sizes.split(',')])
-    input_shape = data_config[data_src]['input_shape']
+    input_shape = dc.src_data_configs[data_src]['input_shape']
     (X_train, y_train), (X_val, y_val), (X_test, y_test) = load_data(
             data_src, sample_sizes,
-            image_dir=data_config[data_src]['data_dir'], 
-            labels=data_config[data_src]['labels'],
             val_pct=val_pct, test_pct=0.0,
             input_shape=input_shape)
     
     # Generate the model instance
-    num_classes = len(data_config[data_src]['labels'].keys())  # number of classes
+    num_classes = len(dc.src_data_configs[data_src]['labels'].keys())  # number of classes
     model_operator = select_model_operator(model_name)(
             input_shape=input_shape, num_classes=num_classes,
             weights=None, optimizer=optimizer, loss=loss, metrics=metrics)
     model = model_operator.create_model(verbose=1)
     
-    callbacks = gen_callbacks(c.model_state_dir + '/{epoch:04d}_{val_loss:.4f}_' + c.model_filename, 
-            metric='val_loss', min_delta=0.001, verbose=2)
-    
+    callbacks = gen_callbacks(dc.model_state_dir.format(data_src=data_src) +\
+            '/{epoch:04d}_{val_loss:.4f}_' + dc.model_filename, 
+            metric='val_loss', 
+            min_delta=0.001, verbose=2)
     X_train, y_train = model_operator.process_X(X_train), model_operator.process_y(y_train)
     X_val, y_val = model_operator.process_X(X_val), model_operator.process_y(y_val)
     
@@ -113,11 +112,12 @@ def main(data_src='mnist', sample_sizes='0,0', model_name='vgg16',
     logger.info('Validation loss: {0:.6f}'.format(score[0]))
     logger.info('Validation accuracy: {0:.6f}'.format(score[1]))
     
-    model.save(c.model_state_dir + '/' + c.model_filename)
+    model.save(dc.model_state_dir.format(data_src=data_src) + '/' + dc.model_filename)
     logger.info("Successfully saved the model")
 
     # Save metrics from the training process for later visualization
-    save_train_metrics(history, metrics, filename=c.model_state_dir + '/plot.txt')
+    save_train_metrics(history, metrics, filename=dc.model_state_dir.format(data_src=data_src)\
+            + '/plot.txt')
     return
 
 
