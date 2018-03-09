@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 """
 
-Models include:
-    tfvgg16, tfcnn,
-    torchvgg16
 """
 from pdb import set_trace as debug
 import re
@@ -25,7 +22,6 @@ def select_model_operator(model_name: str) -> Type[BaseModelOperator]:
          'tfcnn': TfSimpleCnnModelOperator,
          'torchvgg16': TorchVgg16ModelOperator
          }
-
     return x.get(model_name, BaseModelOperator)
 
 

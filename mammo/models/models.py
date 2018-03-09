@@ -13,7 +13,7 @@ from keras.layers import Conv2D, MaxPooling2D, Dropout
 from keras.layers import Flatten, Dense
 from keras.models import Sequential
 from keras.applications.vgg16 import preprocess_input
-import torchvision.models
+# import torchvision.models  # TODO xheng: pytorch in the future
 
 from pydsutils.generic import create_logger
 

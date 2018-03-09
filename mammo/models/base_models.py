@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
-"""Base model functionalities
+"""Base model functions
 
 """
 from pdb import set_trace as debug
 from pydsutils.generic import create_logger
-
 
 logger = create_logger(__name__, level='info')
 

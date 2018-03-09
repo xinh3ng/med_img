@@ -1,5 +1,6 @@
 # Document files
 results/
+log/
 *.zip
 *.gz
 *.pdf
