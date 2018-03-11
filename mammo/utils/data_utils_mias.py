@@ -4,10 +4,9 @@ import os
 from typing import Any
 import numpy as np
 import pandas as pd
-from joblib import Parallel, delayed
 from keras.preprocessing.image import load_img, img_to_array
 from pydsutils.generic import create_logger
-from med_img.mammo.config import data_config as dc
+from med_img.mammo.config import data_configs as dc
 
 pd.options.display.max_colwidth = 120
 logger = create_logger(__name__)
@@ -52,19 +51,6 @@ def create_img_sets(val_pct, test_pct=0.0, extension='pgm', verbose=0) -> pd.Dat
     if verbose >= 1: logger.info('Example:\n%s' % img_sets.head(5).to_string(line_width=144))
     return img_sets
 
-
-def files_to_img_array(filenames, input_shape, n_jobs=-1, verbose=0):
-    """Convert a list of filenames to image (numpy) arrays
-    
-    X's shape should be (num_samples, input_shape)
-    """    
-    if verbose >= 1: logger.info("Start to convert %d image files to numpy arrays" % len(filenames))
-    input_shape_array = [input_shape for _ in range(len(filenames))]
-    X = Parallel(n_jobs=n_jobs)(delayed(file_to_array)(fn, s) for fn, s in \
-                                zip(filenames, input_shape_array))
-    X = np.array(X)
-    if verbose >= 1: logger.info("Successfully converted image files to numpy arrays")
-    return X
 
 
 def file_to_array(filename, input_shape):

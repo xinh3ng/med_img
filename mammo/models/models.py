@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 """
 
-Models include:
-  CNN
-  VGG16
-Usage:
-  $ python train_mammo_model.py --dataset_name=mias --model_name=tfvgg16 --optimizer=adam --loss=categorical_crossentropy
+MODELS:
+  tfcnn
+  tfvgg16
+
 """
 from pdb import set_trace as debug
 from keras.applications.vgg16 import VGG16
@@ -18,7 +17,6 @@ from keras.applications.vgg16 import preprocess_input
 from pydsutils.generic import create_logger
 
 from med_img.mammo.models.base_models import BaseModelOperator
-
 
 logger = create_logger(__name__, level='info')
 

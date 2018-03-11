@@ -12,45 +12,19 @@ import re
 import glob
 import numpy as np
 import pandas as pd
-from joblib import Parallel, delayed
 import keras
 from keras.preprocessing.image import load_img, img_to_array
 from pydsutils.generic import create_logger
-from med_img.mammo.config import data_config as dc
+from med_img.mammo.config import data_configs as dc
 
 pd.options.display.max_colwidth = 144
 logger = create_logger(__name__)
 img_dir = dc.src_data_configs['ddsm']['data_dir']
 labels = dc.src_data_configs['ddsm']['labels']
-NJOBS = -1  # for multiprocessing
+seed = 1
 
 
-def load_img_data(val_pct, test_pct, input_shape, *args: Any, **kwargs: Any):
-    """Main function: Load the images as numpy arrays, reshape them accordingly
-
-    X's shape should be (num_samples, height, width, channel)
-    """
-    # Create a lot of train, validation, test images, e.g.
-    #  filename    label    label_num   type
-    #     0.png   normal            0  train 
-    #     1.png   cancer            1    val
-    img_sets = create_img_sets(val_pct, test_pct)
-
-    X, y = {}, {}
-    for type in ['train', 'val', 'test']:
-        filtered = img_sets[img_sets.type == type]
-        if len(filtered.index) == 0:  # if found no data
-            y[type], X[type] = None, None
-        else:
-            # Convert list of image files to a 4D numpy array
-            X[type] = files_to_img_array(filtered['filename'].values,
-                                           input_shape=input_shape)
-            y[type] = keras.utils.to_categorical(filtered['label_num'].values, len(labels))
-
-    return (X['train'], y['train']), (X['val'], y['val']), (X['test'], y['test'])
-
-
-def create_img_sets(val_pct, test_pct, extension='png'):
+def create_img_sets(val_pct, test_pct, extension='png', verbose=0):
     """Builds a list of train, validation and test images
     
     Analyzes the sub folders in the image directory, splits them by train / val / test and returns a data 
@@ -60,6 +34,7 @@ def create_img_sets(val_pct, test_pct, extension='png'):
         test_pct: Percentage of the images to reserve for tests.
         extension: Image file extention. Default is 'LJPEG'
     """
+    logger.info('Start to create ddsm image sets...')
     assert os.path.isdir(img_dir), "img_dir: %s not valid" % img_dir
     
     img_sets = pd.DataFrame()
@@ -71,15 +46,17 @@ def create_img_sets(val_pct, test_pct, extension='png'):
             type = 'val'
         else:
             type = 'train'
-        
+
         label = filename_to_label(filename, labels.keys())
         row = pd.DataFrame([{'type': type, 'label': label,
                              'label_num': labels[label],  # numerical label
                              'filename': filename}])
         img_sets = pd.concat([img_sets, row], axis=0)
-    img_sets.reset_index(drop=True, inplace=True)
-    logger.info('Successfully created image sets. Showing random selected examples:\n%s' %\
-            img_sets.sample(n=10).to_string(line_width=120))
+
+    img_sets = img_sets.sample(frac=1, random_state=seed).reset_index(drop=True)  # Reshuffle
+    logger.info('Successfully created image sets')
+    if verbose >= 1:
+        logger.info('Showing 10 random examples:\n%s' %img_sets.sample(n=10).to_string(line_width=120))
     return img_sets
 
 
@@ -92,27 +69,13 @@ def filename_to_label(filename, labels):
     return label
 
 
-def files_to_img_array(filenames, input_shape, n_jobs=NJOBS):
-    """Convert a list of file names to an 4d numpy array
-
-    Return:
-        X: shape should be (num_samples, input_shape)
-    """
-    logger.info("Start to convert %d image files to a numpy array" % len(filenames))
-    input_shape_array = [input_shape for _ in range(len(filenames))]
-    X = Parallel(n_jobs=n_jobs)(delayed(file_to_array)(fn, s) for fn, s in \
-                                zip(filenames, input_shape_array))
-    X = np.array(X)
-    logger.info("Successfully converted image files to a 4D numpy array")
-    return X
-
-
 def file_to_array(filename, input_shape):
-    """Convert a single file to image (numpy array)
+    """Helper function to Convert a single file to numpy array
 
     """
-    # It is grayscale image
+    # ddsm is gray-scale image
     img = load_img(filename, target_size=(input_shape[0], input_shape[1]))
+    if input_shape[2] == 1:  # If need grayscale
+        img = img.convert('L')  # To grayscale
     img = img_to_array(img)
     return img
-
