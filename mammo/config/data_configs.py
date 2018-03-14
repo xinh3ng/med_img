@@ -2,13 +2,20 @@
 """
   labels: true label of the image set
   data_dir: source data location
-  input_shape: Shape of the image
+  input_shape: Shape of the image to feed in the model
+
+data_src:
+  ddsm:
+  mias: 1024 x 1024 x 3,
+  cifar10: 32 x 32 x 3, 50000 and 10000
+  mnist: 28 x 28 x 1,  60000 and 10000
 """
 src_data_configs = {
     'ddsm': {
         'labels': {'normal': 0, 'benign': 1, 'cancer': 2},
         'data_dir': '/data/ddsm',
-        'input_shape': (224, 224, 1)  # (224, 224, 3)
+        'input_shape': (400, 250, 1)  # Original image is RGB, (400, 250, 1)
+                                      # (500, 300, 1) triggers OOM error
     },
     'mias': {
         'labels': {'NORMAL': 0, 'CANCER': 1},
@@ -27,7 +34,7 @@ src_data_configs = {
     }
 }
 
-results_dir = '../results/mammo/{data_src}'  # this is locaiton of project root
+results_dir = '../results/mammo/{data_src}'  # this is location of project root
 
 model_state_dir = results_dir + '/model_state'
 

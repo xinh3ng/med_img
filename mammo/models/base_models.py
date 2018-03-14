@@ -30,11 +30,11 @@ class BaseModelOperator(object):
         logger.info('optimizer, loss, and metrics: %s, %s, %s' % (str(self.optimizer), 
                 str(self.loss), str(self.metrics)))
     
-    def create_model(self):
+    def create_model(self, verbose=0):
         raise NotImplementedError
     
-    def process_X(self, X):
+    def process_X(self, X, verbose=0):
         return X
     
-    def process_y(self, y):
+    def process_y(self, y, verbose=0):
         return y

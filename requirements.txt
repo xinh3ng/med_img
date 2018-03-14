@@ -13,5 +13,5 @@ keras
 # http://download.pytorch.org/whl/cu91/torch-0.3.1-cp36-cp36m-linux_x86_64.whl
 # torchvision
 
-https://github.com/xinh3ng/pydsutils/raw/master/packages/pydsutils-0.7.1-py2.py3-none-any.whl
+https://github.com/xinh3ng/pydsutils/raw/master/packages/pydsutils-0.7.2-py2.py3-none-any.whl
 https://github.com/xinh3ng/pymlearn/raw/master/packages/pymlearn-0.7.2-py2.py3-none-any.whl

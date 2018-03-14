@@ -7,7 +7,7 @@
 # batch_size:
 model_configs = {
     'ddsm': {
-        'batch_size': 32
+        'batch_size': 24
     },
     'mias': {
         'batch_size': 24

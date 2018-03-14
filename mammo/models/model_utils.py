@@ -22,7 +22,9 @@ def select_model_operator(model_name: str) -> Type[BaseModelOperator]:
          'tfcnn': TfSimpleCnnModelOperator,
          'torchvgg16': TorchVgg16ModelOperator
          }
-    return x.get(model_name, BaseModelOperator)
+    if model_name not in x.keys():
+        raise KeyError('%s is not a known model name' %model_name)
+    return x[model_name]
 
 
 def select_model_data_validator(model_name: str, num_classes: int, num_rows: int,

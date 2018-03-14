@@ -12,7 +12,6 @@ import re
 import glob
 import numpy as np
 import pandas as pd
-import keras
 from keras.preprocessing.image import load_img, img_to_array
 from pydsutils.generic import create_logger
 from med_img.mammo.config import data_configs as dc
@@ -61,7 +60,7 @@ def create_img_sets(val_pct, test_pct, extension='png', verbose=0):
 
 
 def filename_to_label(filename, labels):
-    """Pick out the label from the long filename
+    """Convert the label from the long filename
     """
     found = [(re.search(r'%s' % x, filename) is not None) for x in labels]
     assert sum(found) == 1, 'should find 1 and only 1 label, but it is not this way'
@@ -73,9 +72,8 @@ def file_to_array(filename, input_shape):
     """Helper function to Convert a single file to numpy array
 
     """
-    # ddsm is gray-scale image
     img = load_img(filename, target_size=(input_shape[0], input_shape[1]))
     if input_shape[2] == 1:  # If need grayscale
-        img = img.convert('L')  # To grayscale
+        img = img.convert('L')
     img = img_to_array(img)
     return img

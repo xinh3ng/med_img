@@ -9,9 +9,9 @@ PROCEDURE:
   $ python train_mammo_model.py --data_src=mnist --model_name=tfcnn --optimizer=adam --loss=categorical_crossentropy
 """
 from pdb import set_trace as debug
-import numpy as np
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 from pydsutils.generic import create_logger
+from pydsutils.file_utils import ensure_dir_exists
 from pymlearn.dl_utils import TfMemoryUsage
 
 from med_img.mammo.config import data_configs as dc
@@ -27,9 +27,9 @@ logger = create_logger(__name__, level='info')
 def gen_callbacks(filename, metric, min_delta, verbose=1):
     """Generate callback functions
     """
+    memory = TfMemoryUsage(show_batch_begin=False, show_batch_end=False)
     checkpt = ModelCheckpoint(filename, monitor=metric, save_best_only=False, period=1, verbose=verbose)
     stopping = EarlyStopping(monitor=metric, min_delta=min_delta, patience=1, verbose=verbose)
-    memory = TfMemoryUsage(show_batch_begin=False, show_batch_end=False)
     # return [memory, checkpt, stopping]
     return [memory]
     
@@ -67,25 +67,27 @@ def main(data_src='mnist', sample_sizes='0,0,0', model_name='tfcnn',
     input_shape = dc.src_data_configs[data_src]['input_shape']
     batch_size = mc.model_configs[data_src]['batch_size']
 
-    # Create train data, val data and test data generators
+    # Create train / val / test data generators
     img_sets_table = gen_img_sets_table(data_src, val_pct, test_pct, verbose=1)
     report_img_sets_stats(img_sets_table)
     md_iters = {}  # model data iterators
     for type in ['train', 'val', 'test']:
         md_iters[type] = batch_gen_model_data(
             data_src, img_sets_table, type, sample_sizes, input_shape,
-            n_jobs=n_jobs, batch_size=batch_size, verbose=1)
+            n_jobs=n_jobs, batch_size=batch_size)
 
     # Generate the model instance
     num_classes = len(dc.src_data_configs[data_src]['labels'].keys())  # number of classes
     model_operator = select_model_operator(model_name)(
         input_shape=input_shape, num_classes=num_classes,
-        weights=None, optimizer=optimizer,
-        loss=loss, metrics=metrics)
+        include_top=True, weights=None,
+        optimizer=optimizer, loss=loss, metrics=metrics)
+
     model = model_operator.create_model(verbose=1)
     train_length = sum(img_sets_table['type'] == 'train')
     val_length = sum(img_sets_table['type'] == 'val')
-    
+
+    ensure_dir_exists(dc.model_state_dir.format(data_src=data_src))
     callbacks = gen_callbacks(dc.model_state_dir.format(data_src=data_src) +\
             '/{epoch:04d}_{val_loss:.4f}_' + dc.model_filename, 
             metric='val_loss', 
