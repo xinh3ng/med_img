@@ -104,7 +104,7 @@ def batch_gen_model_data_from_files(data_src, img_sets_table, type, sample_size,
             cnt += len(chunk)
             # Convert a list of image files to a 4D numpy array
             X = files_to_img_array(data_src, chunk['filename'], input_shape, n_jobs=n_jobs,
-                                   verbose=2)
+                                   verbose=1)
             y = keras.utils.to_categorical(chunk['label_num'].values,
                                            len(set(chunk['label_num'])))
             assert len(set(chunk['label_num'].values)) > 1, 'Label data must have multiple classes'
@@ -125,7 +125,8 @@ def files_to_img_array(data_src, filenames, input_shape, n_jobs=-1, verbose=0):
     """
     file_to_array = fn_map[data_src]['file_to_array']  # function to convert an image to numpy array
     if verbose >= 2:
-        logger.info('Converting %d images to a Numpy array. n_jobs = %d ...' % (len(filenames), n_jobs))
+        logger.info('files_to_img_array: converting %d images to a Numpy array. '
+                    'n_jobs = %d ...' % (len(filenames), n_jobs))
     input_shape_array = [input_shape for _ in range(len(filenames))]
     X = Parallel(n_jobs=n_jobs)(delayed(file_to_array)(fn, s) for fn, s in \
                                 zip(filenames, input_shape_array))

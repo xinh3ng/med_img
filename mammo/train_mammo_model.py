@@ -12,28 +12,28 @@ from pdb import set_trace as debug
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 from pydsutils.generic import create_logger
 from pydsutils.file_utils import ensure_dir_exists
-from pymlearn.dl_utils import TfMemoryUsage
+from pymlearn.dl_utils import TfMemoryUsage, TfMetrics
 
 from med_img.mammo.config import data_configs as dc
 from med_img.mammo.config import model_configs as mc
 from med_img.mammo.utils.data_utils import gen_img_sets_table, report_img_sets_stats, \
     batch_gen_model_data
-from med_img.mammo.models.model_utils import select_model_operator, select_model_data_validator
+from med_img.mammo.models.model_utils import select_model, select_model_data_validator
 
 logger = create_logger(__name__, level='info')
-# np.set_printoptions(precision=4)
 
 
 def gen_callbacks(filename, metric, min_delta, verbose=1):
     """Generate callback functions
     """
     memory = TfMemoryUsage(show_batch_begin=False, show_batch_end=False)
+    # metrics = TfMetrics()
     checkpt = ModelCheckpoint(filename, monitor=metric, save_best_only=False, period=1, verbose=verbose)
     stopping = EarlyStopping(monitor=metric, min_delta=min_delta, patience=1, verbose=verbose)
     # return [memory, checkpt, stopping]
     return [memory]
     
-def save_train_metrics(history, metrics, filename):
+def save_train_metrics(history, filename):
     """Save metrics from the training process for later visualization"""
 
     with open(filename, 'w') as f:
@@ -51,7 +51,7 @@ def save_train_metrics(history, metrics, filename):
 def main(data_src='mnist', sample_sizes='0,0,0', model_name='tfcnn',
          val_pct=0.1, test_pct=0.0,  n_jobs=-1,
          epochs=5,
-         optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy']):
+         optimizer='adam', loss='categorical_crossentropy'):
     """Main function
     
     Args:
@@ -78,12 +78,11 @@ def main(data_src='mnist', sample_sizes='0,0,0', model_name='tfcnn',
 
     # Generate the model instance
     num_classes = len(dc.src_data_configs[data_src]['labels'].keys())  # number of classes
-    model_operator = select_model_operator(model_name)(
-        input_shape=input_shape, num_classes=num_classes,
+    tf_model = select_model(model_name)(
+        input_shape=input_shape, num_classes=num_classes, batch_size=batch_size,
         include_top=True, weights=None,
-        optimizer=optimizer, loss=loss, metrics=metrics)
+        optimizer=optimizer, loss=loss)
 
-    model = model_operator.create_model(verbose=1)
     train_length = sum(img_sets_table['type'] == 'train')
     val_length = sum(img_sets_table['type'] == 'val')
 
@@ -101,29 +100,23 @@ def main(data_src='mnist', sample_sizes='0,0,0', model_name='tfcnn',
     #mdv.validate_X(X_train), mdv.validate_y(y_train)
     #mdv.validate_X(X_val), mdv.validate_y(y_val)
 
-    validation_steps = val_length // batch_size
-    assert validation_steps  >= 1, 'must be larger than 1'
     logger.info('Start the fitting process...')
-    history = model.fit_generator(
-        md_iters['train'],
-        steps_per_epoch=train_length // batch_size,
+    history = tf_model.fit(
+        data=md_iters['train'],
+        train_length=train_length,
         epochs=epochs,
-        validation_data=md_iters['val'],
-        validation_steps=val_length // batch_size,
+        val_data=md_iters['val'],
+        val_length=val_length,
         callbacks=callbacks,
         verbose=2)
     logger.info("Successfully fit the model")
 
-    # Measure model performance
-    score = model.evaluate_generator(md_iters['val'], steps=validation_steps)
-    logger.info('Validation loss: {0:.6f}'.format(score[0]))
-    logger.info('Validation accuracy: {0:.6f}'.format(score[1]))
-    
-    model.save(dc.model_state_dir.format(data_src=data_src) + '/' + dc.model_filename)
-    logger.info("Successfully saved the model")
+    tf_model.evaluate(md_iters['val'], val_length=val_length)
+    # tf_model.save(dc.model_state_dir.format(data_src=data_src) + '/' + dc.model_filename)
+    logger.info('Successfully saved the model')
 
     # Save metrics from the training process for later visualization
-    save_train_metrics(history, metrics, filename=dc.model_state_dir.format(data_src=data_src) + '/plot.txt')
+    save_train_metrics(history, filename=dc.model_state_dir.format(data_src=data_src) + '/plot.txt')
     return
 
 
@@ -142,7 +135,6 @@ if __name__ == '__main__':
             help='Optimizer algorithm: adam')
     parser.add_argument('--loss', default='categorical_crossentropy',
             help='Loss function used by optimizer')
-
     args = parser.parse_args()
     main(**vars(args))
     logger.info('ALL DONE\n')
