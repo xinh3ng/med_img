@@ -47,8 +47,9 @@ def create_img_sets(val_pct, test_pct=0.0, extension='pgm', verbose=0) -> pd.Dat
     img_sets['filename'] = img_dir + '/' + img_sets['filename_short'] + '.' + extension
     img_sets = img_sets.sample(frac=1,  random_state=seed).reset_index(drop=True)  # Reshuffle
 
-    logger.info('Successfully created image sets. Example:')
-    if verbose >= 1: logger.info('Example:\n%s' % img_sets.head(5).to_string(line_width=144))
+    logger.info('Successfully created image sets')
+    if verbose >= 1:
+        logger.info('Examples:\n%s' % img_sets.sample(n=10).to_string(line_width=120))
     return img_sets
 
 

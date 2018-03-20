@@ -8,6 +8,7 @@ MODELS:
 """
 from pdb import set_trace as debug
 from keras.applications.vgg16 import VGG16
+from keras.applications.inception_v3 import InceptionV3
 from keras.layers import Conv2D, MaxPooling2D, Dropout
 from keras.layers import Flatten, Dense
 from keras.models import Sequential
@@ -33,7 +34,7 @@ class TfVgg16(BaseTfModel):
                                        include_top, weights,
                                        optimizer, loss)
 
-    def create_model(self, verbose=0):
+    def create_model(self):
         """Instantiate the VGG16 architecture
     
         """
@@ -43,12 +44,30 @@ class TfVgg16(BaseTfModel):
         
         model.compile(optimizer=self.optimizer, loss=self.loss,
                       metrics=tf_metrics)
-        logger.info("Successfully compiled the model")
+        logger.info("Successfully compiled TfVgg16 model")
         return model
     
     def process_X(self, X):
         return preprocess_input(X)  # for vgg16 only
-    
+
+
+class TfInceptionV3(BaseTfModel):
+    def __init__(self, input_shape, num_classes, batch_size,
+                 include_top=True, weights=None,
+                 optimizer='adam', loss='categorical_crossentropy'):
+        super(TfInceptionV3, self).__init__(input_shape, num_classes, batch_size,
+                                            include_top, weights,
+                                            optimizer, loss)
+
+    def create_model(self):
+        model = InceptionV3(include_top=self.include_top, weights=self.weights,
+                    input_shape=self.input_shape, pooling=None,
+                    classes=self.num_classes)
+        model.compile(optimizer=self.optimizer, loss=self.loss,
+                      metrics=tf_metrics)
+        logger.info("Successfully compiled TfInceptionV3 model")
+        return model
+
 
 class TfSimpleCnn(BaseTfModel):
     def __init__(self, input_shape, num_classes, batch_size,
@@ -72,7 +91,6 @@ class TfSimpleCnn(BaseTfModel):
         model.add(Dense(128, activation='relu'))
         model.add(Dropout(0.5))
         model.add(Dense(self.num_classes, activation='softmax'))
-    
         model.compile(loss=self.loss, optimizer=self.optimizer, metrics=tf_metrics)
-        logger.info("Successfully compiled the model")
+        logger.info("Successfully compiled TfSimpleCnn model")
         return model

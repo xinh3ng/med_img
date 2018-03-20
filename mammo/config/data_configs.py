@@ -20,7 +20,7 @@ src_data_configs = {
     'mias': {
         'labels': {'NORMAL': 0, 'CANCER': 1},
         'data_dir': '/data/mias',
-        'input_shape': (224, 224, 1)
+        'input_shape': (224, 224, 3)
     },
     'mnist': {
         'labels': {'{}'.format(x): x for x in range(10)},  # NB xheng: Not used really

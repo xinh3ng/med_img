@@ -3,6 +3,7 @@
 
 """
 from pdb import set_trace as debug
+import types
 import json
 import numpy as np
 from pydsutils.generic import create_logger
@@ -50,34 +51,44 @@ class BaseTfModel(object):
 
     def fit(self, data, train_length, epochs,
             val_data, val_length,
-            callbacks, verbose):
-
+            callbacks):
+        """Fit the model using either fit() or fit_generator()
+        """
         if self.batch_size == 0:  # Load in the whole data
-            raise NotImplementedError
-
+            # Use the default batch_size, which is 32
+            history = self.model.fit(x=data[0], y=data[1], validation_data=val_data,
+                                     epochs=epochs, callbacks=callbacks,
+                                     verbose=1)
         else:  # Use data generator
-            steps_per_epoch = train_length // self.batch_size
-            validation_steps = val_length // self.batch_size
-            assert validation_steps >= 1, 'must be larger than 1'
-
-            history = self.model.fit_generator(data,
-                steps_per_epoch=steps_per_epoch, epochs=epochs,
-                validation_data=val_data, validation_steps=validation_steps,
-                callbacks=callbacks,
-                verbose=verbose)
+            assert isinstance(data, types.GeneratorType)
+            history = self._fit_generator(data, train_length, epochs,
+                                          val_data, val_length, callbacks, verbose=1)
         return history
+
+    def _fit_generator(self, data, train_length, epochs,
+                       val_data, val_length, callbacks, verbose):
+        steps_per_epoch = train_length // self.batch_size
+        validation_steps = val_length // self.batch_size
+        assert validation_steps >= 1, 'must be larger than 1'
+
+        history = self.model.fit_generator(data,
+                                           steps_per_epoch=steps_per_epoch, epochs=epochs,
+                                           validation_data=val_data, validation_steps=validation_steps,
+                                           callbacks=callbacks,
+                                           verbose=verbose)
+        return history
+
 
     def evaluate(self, val_data, val_length):
         # Measure model performance with validation set
 
         if self.batch_size == 0:
-            raise NotImplementedError
+            scores = self.model.evaluate(val_data[0], val_data[1], verbose=1)
 
         else:
             validation_steps = val_length // self.batch_size
             scores = self.model.evaluate_generator(
                 val_data, steps=validation_steps)
-            scores = {k: np.round(v, 4) for k, v in zip(self.model.metrics_names, scores)}
-            logger.info('Perf scores on val data:\n%s' % json.dumps(scores, sort_keys=True, indent=4))
-
-
+        scores = {k: np.round(v, 4) for k, v in zip(self.model.metrics_names, scores)}
+        logger.info('Perf scores on val data:\n%s' % json.dumps(scores, sort_keys=True, indent=4))
+        return

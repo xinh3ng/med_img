@@ -7,6 +7,7 @@ import keras
 from pydsutils.generic import create_logger
 import med_img.mammo.utils.data_utils_ddsm as ddsm
 import med_img.mammo.utils.data_utils_mias as mias
+import med_img.mammo.utils.data_utils_mnist as mnist
 
 debuglevel = 'info'
 logger = create_logger(__name__, level=debuglevel)
@@ -14,30 +15,18 @@ seed = 1
 
 
 def gen_img_sets_table(data_src: str, val_pct: float, test_pct: float,
-                       verbose: int=0) -> pd.DataFrame:
+                       verbose: int = 0) -> pd.DataFrame:
     """A factory function that creates image set table depending on data source
 
-    :param data_src:
-    :param val_pct:
-    :param test_pct:
-    :return:
+    Args:
+        data_src:
+        val_pct:
+        test_pct:
     """
-    create_img_sets_fn = fn_map[data_src]['create_img_sets']
-    df = create_img_sets_fn(val_pct, test_pct, verbose=verbose)
-    assert all([(x in df.columns) for x in ['filename', 'label', 'label_num', 'type']]),\
+    df = fn_map[data_src]['create_img_sets'](val_pct, test_pct, verbose=verbose)
+    assert all([(x in df.columns) for x in ['filename', 'label', 'label_num', 'type']]), \
         'Missing requreed columns'
     return df
-
-
-def report_img_sets_stats(img_sets_table):
-
-    train_length = sum(img_sets_table['type'] == 'train')
-    val_length = sum(img_sets_table['type'] == 'val')
-    logger.info('Total train and val data lengths: %d, %d' %(train_length, val_length))
-
-    for label in set(img_sets_table['label']):
-        logger.info('Total length of %s label is: %d' % (label, sum(img_sets_table['label'] == label)))
-    return
 
 
 def batch_gen_model_data(data_src, img_sets_table, type, sample_sizes, input_shape,
@@ -52,22 +41,22 @@ def batch_gen_model_data(data_src, img_sets_table, type, sample_sizes, input_sha
         batch_size:
     Returns:
     """
-    sample_size = sample_sizes[0]  # default to tbe train
+    sample_size = sample_sizes[0]  # default to be 'train'
     if type == 'val':
         sample_size = sample_sizes[1]
     elif type == 'test':
         sample_size = sample_sizes[2]
 
-    gen_model_data = fn_map[data_src]['gen_model_data']
-    it = gen_model_data(data_src=data_src,
-                        img_sets_table=img_sets_table,
-                        type=type,
-                        sample_size=sample_size,
-                        input_shape=input_shape,
-                        n_jobs=n_jobs,
-                        batch_size=batch_size)
-    if debuglevel == 'debug': list(it)  # NB xheng: turn on debug mode
-    return it
+    data_tuple = fn_map[data_src]['gen_model_data'](
+        data_src=data_src,
+        img_sets_table=img_sets_table,
+        type=type,
+        sample_size=sample_size,
+        input_shape=input_shape,
+        n_jobs=n_jobs,
+        batch_size=batch_size)
+    if debuglevel == 'debug': list(data_tuple)  # NB xheng: turn on debug mode
+    return data_tuple
 
 
 def batch_gen_model_data_from_files(data_src, img_sets_table, type, sample_size, input_shape,
@@ -79,41 +68,44 @@ def batch_gen_model_data_from_files(data_src, img_sets_table, type, sample_size,
         data_src Data source, e.g. ddsm, mias. It decides location of image folder too.
         type: 'train' or 'val' or 'test'
     """
-    assert batch_size >= 0, 'bitch_size must be either 0 or a pos integer'
     data = img_sets_table[img_sets_table.type == type].reset_index(drop=True)
-    cnt = 0
 
     # 3 scenarios: 1) data is empty -> return None
     #   2) batch_size = 0 -> return all data
     #   3) batch_size > 0 -> create an iterator that returns data chunk by chunk
     if len(data) == 0:  # if found no data
         return None, None
-
     if batch_size == 0:  # 0 means getting all images
-        X = files_to_img_array(data_src, data['filename'], input_shape=input_shape,
-                               verbose=2)
+        X = files_to_img_array(data_src, data['filename'], input_shape=input_shape, verbose=2)
         y = keras.utils.to_categorical(data['label_num'].values, len(set(data['label_num'])))
+        logger.info('Shape of X for %s is: %s' % (type, str(X.shape)))
+        logger.info('Shape of y for %s is: %s' % (type, str(y.shape)))
         return X, y
 
-    # NB: per Keras, generator must loop over its data indefinitely
-    while True:
-        # data = data.sample(frac=1, random_state=seed, axis=1)  # Reshuffling data
-        for b in range(0, len(data), batch_size):
-            end = min(len(data), b + batch_size)
-            chunk = data.loc[b:(end-1)]
-            cnt += len(chunk)
-            # Convert a list of image files to a 4D numpy array
-            X = files_to_img_array(data_src, chunk['filename'], input_shape, n_jobs=n_jobs,
-                                   verbose=1)
-            y = keras.utils.to_categorical(chunk['label_num'].values,
-                                           len(set(chunk['label_num'])))
-            assert len(set(chunk['label_num'].values)) > 1, 'Label data must have multiple classes'
-            if end == len(data):
-                logger.info('batch_gen_model_data_from_files finished 1 cycle of all %s samples' % type)
-            yield X, y
-            if cnt >= sample_size:
-                logger.info('batch_gen_model_data_from_files reached desired sample_size. Early exiting')
-                break
+    def yield_packet():
+        """This is the way to have return and yield in the same function
+        """
+        # NB: per Keras, generator must loop over its data indefinitely
+        while True:
+            cnt = 0
+            # data = data.sample(frac=1, random_state=seed, axis=1)  # Reshuffling data
+            for b in range(0, len(data), batch_size):
+                end = min(len(data), b + batch_size)
+                chunk = data.loc[b:(end-1)]
+                cnt += len(chunk)
+                # Convert a list of image files to a 4D numpy array
+                X = files_to_img_array(data_src, chunk['filename'], input_shape, n_jobs=n_jobs,
+                                       verbose=1)
+                y = keras.utils.to_categorical(chunk['label_num'].values,
+                                               len(set(chunk['label_num'])))
+                assert len(set(chunk['label_num'].values)) > 1, 'Label data must have multiple classes'
+                if end == len(data):
+                    logger.info('batch_gen_model_data_from_files finished 1 cycle of all %s samples' % type)
+                yield X, y
+                if cnt >= sample_size:
+                    logger.info('batch_gen_model_data_from_files reached desired sample_size. Early exiting')
+                    break
+    return yield_packet()
 
 
 def files_to_img_array(data_src, filenames, input_shape, n_jobs=-1, verbose=0):
@@ -148,6 +140,15 @@ fn_map = {
         'create_img_sets': ddsm.create_img_sets,
         'gen_model_data': batch_gen_model_data_from_files,
         'file_to_array': ddsm.file_to_array
-
+    },
+    'mnist': {
+        'create_img_sets': mnist.create_img_sets,
+        'gen_model_data': mnist.gen_model_data('mnist'),
+        'file_to_array': None
+    },
+    'cifar10': {
+        'create_img_sets': mnist.create_img_sets,
+        'gen_model_data': mnist.gen_model_data('cifar10'),
+        'file_to_array': None
     }
 }
