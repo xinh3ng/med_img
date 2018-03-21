@@ -14,8 +14,9 @@ src_data_configs = {
     'ddsm': {
         'labels': {'normal': 0, 'benign': 1, 'cancer': 2},
         'data_dir': '/data/ddsm',
-        'input_shape': (400, 250, 1)  # Original image is RGB, (400, 250, 1)
-                                      # (500, 300, 1) triggers OOM error
+        'input_shape': (224, 224, 3)  # (400, 250, 3)
+            # (500, 300, 3) triggers OOM error
+            # (224, 224, 3)
     },
     'mias': {
         'labels': {'NORMAL': 0, 'CANCER': 1},
